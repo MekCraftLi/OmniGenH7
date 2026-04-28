@@ -1,0 +1,5 @@
+if BOARD_OMNIGEN_H7
+
+config BOARD
+  default "omnigen_h7"
+endif

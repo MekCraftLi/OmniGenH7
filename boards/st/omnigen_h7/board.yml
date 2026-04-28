@@ -1,0 +1,6 @@
+board:
+  name: omnigen_h7
+  full_name: OmniGen H7
+  vendor: st
+  socs:
+    - name: stm32h723xx
