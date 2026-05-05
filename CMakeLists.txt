@@ -10,4 +10,5 @@ target_sources(app PRIVATE
     src/domain/signal_validation.cpp
     src/domain/signal_command.cpp
     src/domain/input_event.cpp
+    src/services/signal_engine.cpp
 )

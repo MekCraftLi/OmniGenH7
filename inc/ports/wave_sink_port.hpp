@@ -29,7 +29,7 @@
 #include "domain/signal_profile.hpp"
 
 #include <cstdint>
-#include <span>
+#include <stddef.h>
 
 namespace omnigen {
 
@@ -45,22 +45,24 @@ public:
     /**
      * @brief Configure the output with given profile.
      */
-    [[nodiscard]] virtual Result<void> configure(const SignalProfile& profile) = 0;
+    virtual Result<void> configure(const SignalProfile& profile) = 0;
 
     /**
      * @brief Start signal output.
      */
-    [[nodiscard]] virtual Result<void> start() = 0;
+    virtual Result<void> start() = 0;
 
     /**
      * @brief Stop signal output.
      */
-    [[nodiscard]] virtual Result<void> stop() = 0;
+    virtual Result<void> stop() = 0;
 
     /**
      * @brief Submit samples for DMA output.
+     * @param samples Pointer to sample array.
+     * @param count Number of samples.
      */
-    [[nodiscard]] virtual Result<void> submit_block(std::span<const uint16_t> samples) = 0;
+    virtual Result<void> submit_block(const uint16_t* samples, size_t count) = 0;
 };
 
 } // namespace omnigen
