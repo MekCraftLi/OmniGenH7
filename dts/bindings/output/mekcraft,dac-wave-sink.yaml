@@ -1,0 +1,34 @@
+# Copyright (c) 2025 MekCraftLi
+# SPDX-License-Identifier: Apache-2.0
+
+description: DAC wave output sink using TIM trigger and DMA
+
+compatible: "mekcraft,dac-wave-sink"
+
+include: base.yaml
+
+properties:
+  dac:
+    type: phandle
+    required: true
+    description: DAC device to use for output
+
+  timer:
+    type: phandle
+    required: true
+    description: Timer to trigger DAC conversions
+
+  dma:
+    type: phandle
+    required: true
+    description: DMA channel for DAC data transfer
+
+  sample-buffer-size:
+    type: int
+    default: 256
+    description: Number of samples in DMA buffer
+
+  sample-rate-hz:
+    type: int
+    default: 10000
+    description: Default sample rate in Hz

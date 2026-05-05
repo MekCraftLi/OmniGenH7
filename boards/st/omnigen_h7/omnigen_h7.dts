@@ -369,3 +369,22 @@
     d2ppre2 = <2>;   /* APB2 分频 (USART1) */
     d3ppre = <2>;    /* APB4 分频 */
 };
+
+/*
+ * DAC1 配置
+ * DAC1 通道 1 输出引脚: PA4
+ * 用于信号输出
+ * 注意: DAC 引脚需要手动配置 GPIO
+ */
+&dac1 {
+    status = "okay";
+};
+
+/*
+ * TIM6 配置
+ * TIM6 用于触发 DAC 输出
+ * 基本定时器，无 GPIO 引脚
+ */
+&timers6 {
+    status = "okay";
+};
