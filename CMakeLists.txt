@@ -11,4 +11,6 @@ target_sources(app PRIVATE
     src/domain/signal_command.cpp
     src/domain/input_event.cpp
     src/services/signal_engine.cpp
+    src/platform/mock_wave_sink.cpp
+    src/diagnostics/shell_commands.cpp
 )
