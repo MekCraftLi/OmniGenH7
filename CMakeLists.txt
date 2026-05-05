@@ -8,4 +8,6 @@ target_sources(app PRIVATE
     src/app/main.cpp
     src/app/composition_root.cpp
     src/domain/signal_validation.cpp
+    src/domain/signal_command.cpp
+    src/domain/input_event.cpp
 )

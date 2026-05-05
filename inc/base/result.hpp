@@ -17,6 +17,8 @@
  * - [[nodiscard]] forces callers to handle the result
  * - Minimal overhead: just the value and an error code
  * - Inspired by Rust's Result<T, E> and C++23's std::expected
+ * - No STL dependencies for embedded compatibility
+ * - C++11 compatible
  *
  *******************************************************************************
  * @author  MekLi
@@ -30,8 +32,6 @@
 /* ------- include ---------------------------------------------------------------------------------------------------*/
 
 #include <cstdint>
-#include <utility>
-#include <type_traits>
 
 namespace omnigen {
 
@@ -60,14 +60,14 @@ enum class ErrorCode : uint8_t {
 /**
  * @brief Check if an error code indicates success.
  */
-[[nodiscard]] inline constexpr bool is_ok(ErrorCode ec) noexcept {
+inline constexpr bool is_ok(ErrorCode ec) noexcept {
     return ec == ErrorCode::Ok;
 }
 
 /**
  * @brief Check if an error code indicates failure.
  */
-[[nodiscard]] inline constexpr bool is_error(ErrorCode ec) noexcept {
+inline constexpr bool is_error(ErrorCode ec) noexcept {
     return ec != ErrorCode::Ok;
 }
 
@@ -75,29 +75,67 @@ enum class ErrorCode : uint8_t {
 
 /**
  * @brief A result type that holds either a value or an error.
+ *
+ * Simplified implementation without STL dependencies.
+ * Suitable for embedded environments with minimal C++ support.
  */
 template <typename T>
-class [[nodiscard]] Result {
+class Result {
 public:
     using ValueType = T;
 
-    constexpr Result(T value) noexcept(std::is_nothrow_move_constructible_v<T>)
-        : value_(std::move(value)), error_(ErrorCode::Ok), has_value_(true) {}
+    /**
+     * @brief Construct a successful result with a value.
+     */
+    constexpr Result(T value) noexcept
+        : value_(value), error_(ErrorCode::Ok), has_value_(true) {}
 
+    /**
+     * @brief Construct a failed result with an error code.
+     */
     constexpr Result(ErrorCode error) noexcept
         : value_(), error_(error), has_value_(false) {}
 
-    [[nodiscard]] constexpr bool is_ok() const noexcept { return has_value_; }
-    [[nodiscard]] constexpr bool is_error() const noexcept { return !has_value_; }
+    /**
+     * @brief Check if this result contains a value.
+     */
+    constexpr bool is_ok() const noexcept {
+        return has_value_;
+    }
 
-    [[nodiscard]] constexpr T& value() & noexcept { return value_; }
-    [[nodiscard]] constexpr const T& value() const& noexcept { return value_; }
-    [[nodiscard]] constexpr T&& value() && noexcept { return std::move(value_); }
+    /**
+     * @brief Check if this result contains an error.
+     */
+    constexpr bool is_error() const noexcept {
+        return !has_value_;
+    }
 
-    [[nodiscard]] constexpr ErrorCode error() const noexcept { return error_; }
+    /**
+     * @brief Get the value. UB if is_error().
+     */
+    T& value() noexcept {
+        return value_;
+    }
 
-    [[nodiscard]] constexpr T value_or(T default_value) const noexcept {
-        return has_value_ ? value_ : std::move(default_value);
+    /**
+     * @brief Get the value (const). UB if is_error().
+     */
+    const T& value() const noexcept {
+        return value_;
+    }
+
+    /**
+     * @brief Get the error code.
+     */
+    constexpr ErrorCode error() const noexcept {
+        return error_;
+    }
+
+    /**
+     * @brief Get the value or a default.
+     */
+    T value_or(T default_value) const noexcept {
+        return has_value_ ? value_ : default_value;
     }
 
 private:
@@ -107,19 +145,43 @@ private:
 };
 
 /**
- * @brief Specialization for void results.
+ * @brief Specialization for void results (operations with no return value).
  */
 template <>
-class [[nodiscard]] Result<void> {
+class Result<void> {
 public:
     using ValueType = void;
 
+    /**
+     * @brief Construct a successful result.
+     */
     constexpr Result() noexcept : error_(ErrorCode::Ok) {}
+
+    /**
+     * @brief Construct a failed result with an error code.
+     */
     constexpr Result(ErrorCode error) noexcept : error_(error) {}
 
-    [[nodiscard]] constexpr bool is_ok() const noexcept { return error_ == ErrorCode::Ok; }
-    [[nodiscard]] constexpr bool is_error() const noexcept { return error_ != ErrorCode::Ok; }
-    [[nodiscard]] constexpr ErrorCode error() const noexcept { return error_; }
+    /**
+     * @brief Check if this result is successful.
+     */
+    constexpr bool is_ok() const noexcept {
+        return error_ == ErrorCode::Ok;
+    }
+
+    /**
+     * @brief Check if this result contains an error.
+     */
+    constexpr bool is_error() const noexcept {
+        return error_ != ErrorCode::Ok;
+    }
+
+    /**
+     * @brief Get the error code.
+     */
+    constexpr ErrorCode error() const noexcept {
+        return error_;
+    }
 
 private:
     ErrorCode error_;
