@@ -1,71 +1,371 @@
+/*
+ * SPDX-FileCopyrightText: Copyright The Zephyr Project Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * ============================================================================
+ * 设备树 (Device Tree) 编写规则详解
+ * ============================================================================
+ *
+ * 一、基本结构
+ * ----------------------------------------------------------------------------
+ * 设备树是一个分层的数据结构，用于描述硬件配置。它由节点 (node) 和属性 (property)
+ * 组成，形成树状结构。
+ *
+ * 1. 根节点: 用 "/" 表示，包含所有其他节点
+ * 2. 节点标签 (label): 用于引用节点，如 &usart1
+ * 3. 节点路径: 如 /soc/serial@40011000
+ * 4. 属性: 键值对，如 status = "okay";
+ *
+ * 二、节点定义语法
+ * ----------------------------------------------------------------------------
+ *
+ * [标签:] 节点名[@单元地址] {
+ *     属性名 = <值>;
+ *     属性名 = "字符串值";
+ *     属性名 = <值1 值2 值3>;  // 数组
+ *     子节点 {...};
+ * };
+ *
+ * 示例:
+ *   usart1: serial@40011000 {
+ *       compatible = "st,stm32-usart";
+ *       reg = <0x40011000 0x400>;
+ *       status = "okay";
+ *   };
+ *
+ * 解释:
+ *   - usart1: 节点标签，可通过 &usart1 引用
+ *   - serial: 节点名称，描述设备类型
+ *   - @40011000: 单元地址，设备的基地址
+ *   - compatible: 兼容性字符串，用于匹配驱动
+ *   - reg: 寄存器地址和大小
+ *   - status: 状态，"okay" 表示启用，"disabled" 表示禁用
+ *
+ * 三、常用属性类型
+ * ----------------------------------------------------------------------------
+ *
+ * 1. 字符串:     compatible = "vendor,device";
+ * 2. 整数:       clock-frequency = <25000000>;
+ * 3. 整数数组:   reg = <0x40011000 0x400>;
+ * 4. 引用:       clocks = <&rcc>;
+ * 5. 引用数组:   pinctrl-0 = <&usart1_tx &usart1_rx>;
+ * 6. 布尔:       status = "okay";  // 或 "disabled"
+ * 7. 混合数组:   gpios = <&gpiog 7 GPIO_ACTIVE_HIGH>;
+ *
+ * 四、特殊属性
+ * ----------------------------------------------------------------------------
+ *
+ * 1. compatible: 驱动匹配字符串，格式为 "vendor,device"
+ *    - 驱动程序通过此属性找到对应的设备
+ *    - 可以有多个值，按优先级排序
+ *    示例: compatible = "st,stm32-usart", "st,stm32-uart";
+ *
+ * 2. reg: 寄存器区域，格式为 <地址 大小>
+ *    - 可有多个区域: reg = <0x40011000 0x400>, <0x40012000 0x100>;
+ *
+ * 3. interrupts: 中断配置
+ *    - 格式取决于中断控制器
+ *    示例: interrupts = <37 0>;  // 中断号, 触发方式
+ *
+ * 4. clocks: 时钟源配置
+ *    - 引用时钟提供者
+ *    示例: clocks = <&rcc STM32_CLOCK(APB2, 4)>;
+ *
+ * 5. status: 设备状态
+ *    - "okay": 设备已启用
+ *    - "disabled": 设备已禁用（默认值）
+ *    - "reserved": 设备保留，不可使用
+ *
+ * 6. pinctrl-X: 引脚控制配置
+ *    - X 从 0 开始编号
+ *    - 引用 pinctrl 节点定义的引脚配置
+ *
+ * 五、节点追加和覆盖
+ * ----------------------------------------------------------------------------
+ *
+ * 在板级 DTS 中，通常覆盖或追加 SoC DTSI 中定义的节点:
+ *
+ * &usart1 {
+ *     pinctrl-0 = <&usart1_tx_pa9 &usart1_rx_pa10>;
+ *     pinctrl-names = "default";
+ *     current-speed = <115200>;
+ *     status = "okay";  // 启用设备
+ * };
+ *
+ * 注意:
+ *   - 使用 & 引用节点标签
+ *   - 只需定义需要覆盖或添加的属性
+ *   - status = "okay" 启用设备
+ *
+ * 六、chosen 节点
+ * ----------------------------------------------------------------------------
+ *
+ * chosen 节点用于系统级配置，告诉 Zephyr 使用哪些设备:
+ *
+ * chosen {
+ *     zephyr,console = &usart1;      // 控制台 UART
+ *     zephyr,shell-uart = &usart1;   // Shell UART
+ *     zephyr,sram = &sram0;          // SRAM 区域
+ *     zephyr,flash = &flash0;        // Flash 区域
+ * };
+ *
+ * 七、aliases 节点
+ * ----------------------------------------------------------------------------
+ *
+ * aliases 用于创建设备别名，简化设备获取:
+ *
+ * aliases {
+ *     led0 = &user_led;    // 别名 led0 指向 user_led 节点
+ *     uart0 = &usart1;     // 别名 uart0 指向 usart1 节点
+ * };
+ *
+ * 在代码中使用:
+ *   DEVICE_DT_GET(DT_ALIAS(led0));  // 获取 led0 设备
+ *
+ * 八、pinctrl 配置
+ * ----------------------------------------------------------------------------
+ *
+ * pinctrl 定义引脚复用配置:
+ *
+ * usart1_tx_pa9: usart1_tx_pa9 {
+ *     pinmux = <STM32_PINMUX('A', 9, AF7)>;  // PA9, 复用功能 7
+ *     bias-pull-up;                          // 上拉
+ * };
+ *
+ * usart1_rx_pa10: usart1_rx_pa10 {
+ *     pinmux = <STM32_PINMUX('A', 10, AF7)>; // PA10, 复用功能 7
+ * };
+ *
+ * 常用引脚属性:
+ *   - bias-pull-up:     上拉电阻
+ *   - bias-pull-down:   下拉电阻
+ *   - bias-disable:     禁用偏置
+ *   - drive-push-pull:  推挽输出
+ *   - drive-open-drain: 开漏输出
+ *   - slew-rate:        压摆率
+ *
+ * 九、DMA 配置
+ * ----------------------------------------------------------------------------
+ *
+ * dmas 属性定义 DMA 通道:
+ *
+ * dmas = <&dmamux1 10 45 STM32_DMA_PERIPH_TX>,   // TX DMA
+ *        <&dmamux1 11 46 STM32_DMA_PERIPH_RX>;   // RX DMA
+ * dma-names = "tx", "rx";
+ *
+ * 参数解释:
+ *   - &dmamux1: DMA MUX 控制器引用
+ *   - 10: DMA 请求号 (通道选择)
+ *   - 45: DMA 请求 ID (外设请求)
+ *   - STM32_DMA_PERIPH_TX: 传输方向
+ *
+ * 十、时钟配置
+ * ----------------------------------------------------------------------------
+ *
+ * STM32H7 时钟树配置:
+ *
+ * &pll {
+ *     div-m = <2>;      // 输入分频
+ *     mul-n = <44>;     // VCO 倍频
+ *     div-p = <1>;      // P 输出分频 (SYSCLK)
+ *     clocks = <&clk_hse>;  // 时钟源
+ *     status = "okay";
+ * };
+ *
+ * &rcc {
+ *     clocks = <&pll>;              // 系统时钟源
+ *     clock-frequency = <DT_FREQ_M(550)>;  // 系统时钟频率
+ *     d1cpre = <1>;    // D1 域 CPU 时钟分频
+ *     hpre = <2>;      // AHB 总线分频
+ *     d1ppre = <2>;    // APB3 分频
+ *     d2ppre1 = <2>;   // APB1 分频 (USART3 所在)
+ *     d2ppre2 = <2>;   // APB2 分频 (USART1 所在)
+ *     d3ppre = <2>;    // APB4 分频
+ * };
+ *
+ * ============================================================================
+ */
+
 /dts-v1/;
 
-#include <st/h7/stm32h723Xg.dtsi>
-#include <st/h7/stm32h723zgtx-pinctrl.dtsi>
+/*
+ * 包含 SoC 基础定义
+ * 这些文件定义了 SoC 的所有外设节点，默认 status = "disabled"
+ */
+#include <st/h7/stm32h723Xg.dtsi>           /* STM32H723ZG SoC 定义 */
+#include <st/h7/stm32h723zgtx-pinctrl.dtsi> /* 引脚复用定义 */
+#include <zephyr/dt-bindings/dma/stm32_dma.h>  /* DMA 宏定义 */
 
 / {
+    /*
+     * 板级模型和兼容性
+     * model: 板子名称，用于日志和识别
+     * compatible: 格式为 "vendor,board"，用于匹配板级配置
+     */
     model = "OmniGen H7 Board";
     compatible = "mekcraft,omnigen-h7";
 
+    /*
+     * chosen 节点: 系统级配置
+     * 告诉 Zephyr 使用哪些设备作为系统资源
+     */
     chosen {
-      zephyr,console = &usart3;
-      zephyr,shell-uart = &usart3;
-      zephyr,sram = &sram0;
-      zephyr,flash = &flash0;
+        zephyr,console = &usart1;      /* 控制台输出设备 */
+        zephyr,shell-uart = &usart1;   /* Shell 交互设备 */
+        zephyr,sram = &sram0;          /* 主 SRAM 区域 */
+        zephyr,flash = &flash0;        /* 主 Flash 区域 */
     };
 
+    /*
+     * LEDs 节点: GPIO LED 定义
+     * compatible = "gpio-leds" 匹配 GPIO LED 驱动
+     */
     leds {
-      compatible = "gpio-leds";
-      user_led: led_0 {
-        gpios = <&gpiog 7 GPIO_ACTIVE_HIGH>;
-        label = "User LED";
-      };
+        compatible = "gpio-leds";
+
+        /*
+         * LED 子节点
+         * 格式: 标签: 节点名 {
+         *     gpios = <&gpio控制器 引脚号 标志>;
+         *     label = "用户可见名称";
+         * }
+         */
+        user_led: led_0 {
+            gpios = <&gpiog 7 GPIO_ACTIVE_HIGH>;  /* PG7, 高电平点亮 */
+            label = "User LED";
+        };
     };
 
+    /*
+     * aliases 节点: 设备别名
+     * 简化设备获取，使用 DT_ALIAS(alias_name) 宏
+     */
     aliases {
-      led0 = &user_led;
+        led0 = &user_led;  /* led0 别名指向 user_led */
     };
 };
 
-&usart3 {
-  pinctrl-0 = <&usart3_tx_pd8 &usart3_rx_pd9>;
-  pinctrl-names = "default";
-  current-speed = <115200>;
-  status = "okay";
+/*
+ * DMA1 控制器配置
+ * status = "okay" 启用 DMA1
+ */
+&dma1 {
+    status = "okay";
 };
 
+/*
+ * DMA MUX1 配置
+ * DMA MUX 用于将 DMA 请求路由到正确的 DMA 通道
+ */
+&dmamux1 {
+    status = "okay";
+};
+
+/*
+ * USART1 配置
+ * USART1 挂载在 APB2 总线上
+ * 引脚: PA9 (TX), PA10 (RX)
+ */
+&usart1 {
+    /*
+     * pinctrl-X: 引脚控制配置
+     * X 从 0 开始，可以有多个配置 (如 default, sleep)
+     * 这里引用 pinctrl.dtsi 中定义的引脚配置
+     */
+    pinctrl-0 = <&usart1_tx_pa9 &usart1_rx_pa10>;
+    pinctrl-names = "default";  /* 配置名称 */
+
+    /*
+     * current-speed: 波特率
+     * 驱动初始化时会设置此波特率
+     */
+    current-speed = <115200>;
+
+    /*
+     * status: 启用设备
+     * SoC dtsi 中默认为 "disabled"，这里覆盖为 "okay"
+     */
+    status = "okay";
+
+    /*
+     * DMA 配置 (可选)
+     * 如果需要 DMA 支持，取消注释以下配置
+     * DMA 请求 ID 需要查阅 STM32H7 参考手册
+     */
+    /* dmas = <&dmamux1 0 40 STM32_DMA_PERIPH_TX>, */
+    /*        <&dmamux1 1 41 STM32_DMA_PERIPH_RX>; */
+    /* dma-names = "tx", "rx"; */
+};
+
+/*
+ * LSE (低速外部晶振) 配置
+ * 通常用于 RTC
+ */
 &clk_lse {
-  status = "okay";
+    status = "okay";
 };
 
+/*
+ * HSE (高速外部晶振) 配置
+ * 这是系统主时钟源
+ */
 &clk_hse {
-  clock-frequency = <DT_FREQ_M(25)>;
-  status = "okay";
+    clock-frequency = <DT_FREQ_M(25)>;  /* 25 MHz 晶振 */
+    status = "okay";
 };
 
+/*
+ * PLL1 配置 (系统主 PLL)
+ *
+ * STM32H7 PLL 计算:
+ *   PLL输入 = HSE / DIVM = 25 MHz / 2 = 12.5 MHz
+ *   VCO频率 = PLL输入 × DIVN = 12.5 MHz × 44 = 550 MHz
+ *   SYSCLK = VCO / DIVP = 550 MHz / 1 = 550 MHz
+ *
+ * 注意: VCO 必须在 192-960 MHz 范围内
+ */
 &pll {
-  div-m = <5>;
-  mul-n = <110>;
-  div-p = <2>;
-  div-q = <2>;
-  div-r = <2>;
-  clocks = <&clk_hse>;
-  status = "okay";
+    div-m = <2>;   /* 输入分频: HSE/2 = 12.5 MHz */
+    mul-n = <44>;  /* VCO 倍频: 12.5 × 44 = 550 MHz */
+    div-p = <1>;   /* SYSCLK 分频: 550/1 = 550 MHz */
+    div-q = <2>;   /* Q 输出 (可选用途) */
+    div-r = <2>;   /* R 输出 (可选用途) */
+    clocks = <&clk_hse>;  /* 时钟源: HSE */
+    status = "okay";
 };
 
+/*
+ * PWR (电源) 配置
+ * power-supply: 电压调节器类型
+ *   - "ldo": 使用内部 LDO
+ *   - "smps": 使用 SMPS
+ */
 &pwr {
-  power-supply = "ldo";
+    power-supply = "ldo";
 };
 
+/*
+ * RCC (复位和时钟控制) 配置
+ *
+ * STM32H7 时钟树:
+ *   SYSCLK (550 MHz)
+ *     └─ D1CPRE (/1) → CPU 时钟 (550 MHz)
+ *     └─ HPRE (/2) → HCLK (275 MHz) [AHB/内存/DMA]
+ *        ├─ D1PPRE (/2) → APB3 (137.5 MHz)
+ *        ├─ D2PPRE1 (/2) → APB1 (137.5 MHz) [USART2/3, UART4/5...]
+ *        ├─ D2PPRE2 (/2) → APB2 (137.5 MHz) [USART1/6, SPI1...]
+ *        └─ D3PPRE (/2) → APB4 (137.5 MHz)
+ *
+ * USART1 挂载在 APB2 上，时钟 = 137.5 MHz
+ */
 &rcc {
-  clocks = <&pll>;
-  clock-frequency = <DT_FREQ_M(550)>;
-  d1cpre = <1>;
-  hpre = <2>;
-  d1ppre = <2>;
-  d2ppre1 = <2>;
-  d2ppre2 = <2>;
-  d3ppre = <2>;
+    clocks = <&pll>;                    /* 系统时钟源: PLL */
+    clock-frequency = <DT_FREQ_M(550)>; /* SYSCLK 频率 */
+
+    d1cpre = <1>;    /* D1 域 CPU 时钟分频 */
+    hpre = <2>;      /* AHB 总线分频 */
+    d1ppre = <2>;    /* APB3 分频 */
+    d2ppre1 = <2>;   /* APB1 分频 */
+    d2ppre2 = <2>;   /* APB2 分频 (USART1) */
+    d3ppre = <2>;    /* APB4 分频 */
 };
-
-
