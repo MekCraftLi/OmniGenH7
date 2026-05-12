@@ -388,3 +388,33 @@
 &timers6 {
     status = "okay";
 };
+
+&octospi1 {
+    pinctrl-0 = <&octospim_p1_ncs_pg6 &octospim_p1_clk_pf10
+                 &octospim_p1_io0_pf8 &octospim_p1_io1_pf9
+                 &octospim_p1_io2_pf7 &octospim_p1_io3_pf6>;
+    pinctrl-names = "default";
+    status = "okay";
+
+    w25q64: qspi-nor-flash@0 {
+        compatible = "st,stm32-ospi-nor";
+        reg = <0 DT_SIZE_M(8)>; /* 64 Mbits */
+        ospi-max-frequency = <DT_FREQ_M(80)>;
+        spi-bus-width = <OSPI_QUAD_MODE>;
+        data-rate = <OSPI_STR_TRANSFER>;
+        writeoc = "PP_1_1_4";
+        size = <DT_SIZE_M(64)>;
+        status = "okay";
+
+        partitions {
+            compatible = "fixed-partitions";
+            #address-cells = <1>;
+            #size-cells = <1>;
+
+            w25q64_storage: partition@0 {
+                label = "w25q64-storage";
+                reg = <0x00000000 DT_SIZE_M(8)>;
+            };
+        };
+    };
+};
