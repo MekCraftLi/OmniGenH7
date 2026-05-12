@@ -80,8 +80,9 @@ Result<void> DacControlManager::configure(const SignalProfile& profile) {
         return rc.error();
     }
 
-    LOG_INF("DAC configured: waveform=%d freq=%uHz sample_rate=%uHz", static_cast<int>(profile_.kind),
-            profile_.frequency.value, sample_rate_hz_);
+    LOG_INF("DAC configured: waveform=%d freq=%u.%03uHz sample_rate=%uHz samples=%u",
+            static_cast<int>(profile_.kind), profile_.frequency.value / 1000U, profile_.frequency.value % 1000U,
+            sample_rate_hz_, wave_table_size_);
     return ErrorCode::Ok;
 }
 
@@ -108,8 +109,10 @@ Result<void> DacControlManager::start() {
 
     atomic_set(&running_, 1);
 
-    LOG_INF("DAC start requested: top=%u sample_rate=%uHz waveform=%uHz", tim6_top_ticks_, sample_rate_hz_,
-            profile_.frequency.value);
+    const uint32_t actual_freq_mhz = static_cast<uint32_t>(
+        (static_cast<uint64_t>(sample_rate_hz_) * 1000U) / wave_table_size_);
+    LOG_INF("DAC start requested: top=%u sample_rate=%uHz samples=%u actual=%u.%03uHz", tim6_top_ticks_,
+            sample_rate_hz_, wave_table_size_, actual_freq_mhz / 1000U, actual_freq_mhz % 1000U);
     return ErrorCode::Ok;
 }
 
@@ -265,7 +268,7 @@ void DacControlManager::on_dma_complete(const struct device* dev, void* user_dat
 }
 
 Result<void> DacControlManager::apply_runtime_profile() {
-    uint32_t waveform_hz = profile_.frequency.value == 0U ? kDefaultFreqHz : profile_.frequency.value;
+    uint32_t waveform_mhz = profile_.frequency.value == 0U ? kDefaultFreqHz * 1000U : profile_.frequency.value;
     uint32_t requested_sample_rate = profile_.sample_rate.value;
 
     if (timer_input_hz_ == 0U) {
@@ -274,7 +277,8 @@ Result<void> DacControlManager::apply_runtime_profile() {
 
     uint32_t target_sample_rate = requested_sample_rate;
     if (target_sample_rate == 0U) {
-        target_sample_rate = waveform_hz * kWaveTableSize;
+        target_sample_rate = static_cast<uint32_t>(
+            (static_cast<uint64_t>(waveform_mhz) * active_wave_table_size() + 999U) / 1000U);
     }
     if (target_sample_rate == 0U || target_sample_rate > timer_input_hz_) {
         return ErrorCode::InvalidArgument;
@@ -293,6 +297,8 @@ Result<void> DacControlManager::apply_runtime_profile() {
     sample_rate_hz_     = timer_input_hz_ / (top_ticks + 1U);
     tim6_top_ticks_     = top_ticks;
     tim6_top_cfg_.ticks = top_ticks;
+    wave_table_size_    = static_cast<uint16_t>(active_wave_table_size());
+    dma_block_cfg_.block_size = wave_table_size_ * sizeof(uint16_t);
 
     if (ready_ && tim6_counter_dev_ != nullptr) {
         int rc = counter_set_top_value(tim6_counter_dev_, &tim6_top_cfg_);
@@ -316,15 +322,16 @@ Result<void> DacControlManager::apply_runtime_profile() {
 }
 
 uint16_t DacControlManager::calc_sine_sample(uint32_t phase_index) const {
-    const float phase = (kTwoPi * static_cast<float>(phase_index % kWaveTableSize)) /
-                        static_cast<float>(kWaveTableSize);
+    const uint32_t table_size = active_wave_table_size();
+    const float phase = (kTwoPi * static_cast<float>(phase_index % table_size)) / static_cast<float>(table_size);
     const int32_t norm_milli = static_cast<int32_t>(sinf(phase) * 1000.0F);
     return convert_mv_to_dac_code(calc_level_mv_from_norm(norm_milli));
 }
 
 uint16_t DacControlManager::calc_triangle_sample(uint32_t phase_index) const {
-    const uint32_t idx = phase_index % kWaveTableSize;
-    const uint32_t half = kWaveTableSize / 2U;
+    const uint32_t table_size = active_wave_table_size();
+    const uint32_t idx = phase_index % table_size;
+    const uint32_t half = table_size / 2U;
     int32_t norm_milli = 0;
 
     if (idx < half) {
@@ -337,18 +344,29 @@ uint16_t DacControlManager::calc_triangle_sample(uint32_t phase_index) const {
 }
 
 uint16_t DacControlManager::calc_saw_sample(uint32_t phase_index) const {
-    const uint32_t idx = phase_index % kWaveTableSize;
-    const int32_t norm_milli = -1000 + static_cast<int32_t>((2000U * idx) / kWaveTableSize);
+    const uint32_t table_size = active_wave_table_size();
+    const uint32_t idx = phase_index % table_size;
+    const int32_t norm_milli = -1000 + static_cast<int32_t>((2000U * idx) / table_size);
     return convert_mv_to_dac_code(calc_level_mv_from_norm(norm_milli));
 }
 
 uint16_t DacControlManager::calc_square_sample(uint32_t phase_index) const {
-    const uint32_t idx = phase_index % kWaveTableSize;
+    const uint32_t table_size = active_wave_table_size();
+    const uint32_t idx = phase_index % table_size;
     const uint32_t duty_permille = profile_.duty.value > 1000U ? 1000U : profile_.duty.value;
-    const uint32_t high_count = (kWaveTableSize * duty_permille) / 1000U;
+    const uint32_t high_count = (table_size * duty_permille) / 1000U;
     const bool high = idx < high_count;
     const int32_t norm_milli = high ? 1000 : -1000;
     return convert_mv_to_dac_code(calc_level_mv_from_norm(norm_milli));
+}
+
+uint32_t DacControlManager::active_wave_table_size() const {
+    const uint32_t samples = profile_.samples_per_cycle;
+    if (samples == 0U || samples > kWaveTableSize) {
+        return kWaveTableSize;
+    }
+
+    return samples;
 }
 
 uint16_t DacControlManager::convert_mv_to_dac_code(int32_t mv) const {
@@ -374,7 +392,8 @@ Result<void> DacControlManager::rebuild_wave_buffer() {
         return ErrorCode::InvalidArgument;
     }
 
-    for (uint32_t i = 0U; i < kWaveTableSize; ++i) {
+    const uint32_t table_size = active_wave_table_size();
+    for (uint32_t i = 0U; i < table_size; ++i) {
         switch (profile_.kind) {
             case WaveformKind::Sine:
                 wave_buffer_[i] = calc_sine_sample(i);
@@ -395,6 +414,10 @@ Result<void> DacControlManager::rebuild_wave_buffer() {
                 wave_buffer_[i] = convert_mv_to_dac_code(profile_.offset.value);
                 break;
         }
+    }
+
+    for (uint32_t i = table_size; i < kWaveTableSize; ++i) {
+        wave_buffer_[i] = wave_buffer_[0];
     }
 
     return ErrorCode::Ok;

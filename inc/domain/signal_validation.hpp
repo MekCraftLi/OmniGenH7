@@ -54,6 +54,19 @@ namespace omnigen {
 );
 
 /**
+ * @brief Select a waveform table size from frequency and sample-rate limits.
+ *
+ * Uses fixed point frequency in milli-Hz and keeps the resulting sample rate
+ * within the configured limits.
+ */
+[[nodiscard]] uint16_t select_samples_per_cycle(FrequencyHz frequency, const SignalLimits& limits);
+
+/**
+ * @brief Calculate integer sample rate for the selected table size.
+ */
+[[nodiscard]] SampleRateHz calculate_sample_rate(FrequencyHz frequency, uint16_t samples_per_cycle);
+
+/**
  * @brief Get default signal limits for STM32H723 DAC.
  *
  * These are conservative limits based on DAC specifications

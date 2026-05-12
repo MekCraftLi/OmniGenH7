@@ -182,7 +182,8 @@ Result<void> SignalEngine::handle_set_frequency(FrequencyHz freq) {
 
     SignalProfile new_profile = active_profile_;
     new_profile.frequency     = freq;
-    new_profile.sample_rate   = SampleRateHz{freq.value * 64U};
+    new_profile.samples_per_cycle = select_samples_per_cycle(freq, limits_);
+    new_profile.sample_rate = calculate_sample_rate(freq, new_profile.samples_per_cycle);
 
     Result<void> validation   = validate_signal_profile(new_profile, limits_);
     if (validation.is_error()) {
@@ -200,6 +201,20 @@ Result<void> SignalEngine::handle_set_sample_rate(SampleRateHz sample_rate) {
 
     SignalProfile new_profile = active_profile_;
     new_profile.sample_rate   = sample_rate;
+    if (new_profile.frequency.value == 0U) {
+        return ErrorCode::InvalidArgument;
+    }
+
+    const uint64_t samples =
+        (static_cast<uint64_t>(sample_rate.value) * 1000U + (new_profile.frequency.value / 2U)) /
+        new_profile.frequency.value;
+    if (samples < limits_.min_samples_per_cycle || samples > limits_.max_samples_per_cycle) {
+        return ErrorCode::InvalidArgument;
+    }
+    if (calculate_sample_rate(new_profile.frequency, static_cast<uint16_t>(samples)).value != sample_rate.value) {
+        return ErrorCode::InvalidArgument;
+    }
+    new_profile.samples_per_cycle = static_cast<uint16_t>(samples);
 
     Result<void> validation   = validate_signal_profile(new_profile, limits_);
     if (validation.is_error()) {

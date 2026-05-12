@@ -30,7 +30,10 @@ namespace omnigen {
 /*-------- 3. interface ----------------------------------------------------------------------------------------------*/
 
 /**
- * @brief Frequency in Hertz.
+ * @brief Frequency in milli-Hertz.
+ *
+ * Shell/UI still use Hz. Internally, value stores Hz * 1000 so fractional Hz
+ * can be represented without keeping floating point in the domain layer.
  */
 struct FrequencyHz {
     uint32_t value;

@@ -36,6 +36,9 @@ constexpr uint32_t kDefaultMinSampleRateHz = 1000;
 constexpr uint32_t kDefaultMaxSampleRateHz = 1000000;
 constexpr int32_t kDefaultMinVoltageMv = 0;
 constexpr int32_t kDefaultMaxVoltageMv = 3300;
+constexpr uint32_t kMilliHzPerHz = 1000U;
+constexpr uint16_t kDefaultMinSamplesPerCycle = 16U;
+constexpr uint16_t kDefaultMaxSamplesPerCycle = 64U;
 
 /* ------- function implement ----------------------------------------------------------------------------------------*/
 
@@ -47,6 +50,11 @@ Result<void> validate_signal_profile(
     /* Check frequency range */
     if (profile.frequency.value < limits.min_frequency.value ||
         profile.frequency.value > limits.max_frequency.value) {
+        return ErrorCode::InvalidArgument;
+    }
+
+    if (profile.samples_per_cycle < limits.min_samples_per_cycle ||
+        profile.samples_per_cycle > limits.max_samples_per_cycle) {
         return ErrorCode::InvalidArgument;
     }
 
@@ -85,7 +93,8 @@ Result<void> validate_signal_profile(
     }
 
     /* Sample rate must be at least 2x frequency (Nyquist) */
-    if (profile.sample_rate.value < profile.frequency.value * 2) {
+    const uint64_t nyquist_sample_rate_mhz = static_cast<uint64_t>(profile.sample_rate.value) * kMilliHzPerHz;
+    if (nyquist_sample_rate_mhz < static_cast<uint64_t>(profile.frequency.value) * 2U) {
         return ErrorCode::InvalidArgument;
     }
 
@@ -95,12 +104,14 @@ Result<void> validate_signal_profile(
 SignalLimits get_default_signal_limits()
 {
     return SignalLimits{
-        .min_frequency = FrequencyHz{kDefaultMinFrequencyHz},
-        .max_frequency = FrequencyHz{kDefaultMaxFrequencyHz},
+        .min_frequency = FrequencyHz{kDefaultMinFrequencyHz * kMilliHzPerHz},
+        .max_frequency = FrequencyHz{kDefaultMaxFrequencyHz * kMilliHzPerHz},
         .min_sample_rate = SampleRateHz{kDefaultMinSampleRateHz},
         .max_sample_rate = SampleRateHz{kDefaultMaxSampleRateHz},
         .min_voltage = VoltageMv{kDefaultMinVoltageMv},
         .max_voltage = VoltageMv{kDefaultMaxVoltageMv},
+        .min_samples_per_cycle = kDefaultMinSamplesPerCycle,
+        .max_samples_per_cycle = kDefaultMaxSamplesPerCycle,
     };
 }
 
@@ -108,13 +119,39 @@ SignalProfile get_default_signal_profile()
 {
     return SignalProfile{
         .kind = WaveformKind::Sine,
-        .frequency = FrequencyHz{1000},
-        .sample_rate = SampleRateHz{10000},
+        .frequency = FrequencyHz{1000U * kMilliHzPerHz},
+        .sample_rate = SampleRateHz{64000},
+        .samples_per_cycle = 64U,
         .amplitude = VoltageMv{1000},
         .offset = VoltageMv{1650},
         .duty = DutyPermille{500},
         .output_enabled = false,
     };
+}
+
+uint16_t select_samples_per_cycle(FrequencyHz frequency, const SignalLimits& limits)
+{
+    static constexpr uint16_t candidates[] = {64U, 32U, 16U};
+
+    for (uint16_t samples : candidates) {
+        if (samples < limits.min_samples_per_cycle || samples > limits.max_samples_per_cycle) {
+            continue;
+        }
+
+        const SampleRateHz sample_rate = calculate_sample_rate(frequency, samples);
+        if (sample_rate.value >= limits.min_sample_rate.value && sample_rate.value <= limits.max_sample_rate.value) {
+            return samples;
+        }
+    }
+
+    return limits.min_samples_per_cycle;
+}
+
+SampleRateHz calculate_sample_rate(FrequencyHz frequency, uint16_t samples_per_cycle)
+{
+    const uint64_t sample_rate_mhz = static_cast<uint64_t>(frequency.value) * samples_per_cycle;
+    const uint32_t sample_rate_hz = static_cast<uint32_t>((sample_rate_mhz + 999U) / kMilliHzPerHz);
+    return SampleRateHz{sample_rate_hz};
 }
 
 } // namespace omnigen

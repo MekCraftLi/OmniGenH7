@@ -53,6 +53,7 @@ struct SignalProfile {
     WaveformKind kind;
     FrequencyHz frequency;
     SampleRateHz sample_rate;
+    uint16_t samples_per_cycle;
     VoltageMv amplitude;
     VoltageMv offset;
     DutyPermille duty;
@@ -69,6 +70,8 @@ struct SignalLimits {
     SampleRateHz max_sample_rate;
     VoltageMv min_voltage;
     VoltageMv max_voltage;
+    uint16_t min_samples_per_cycle;
+    uint16_t max_samples_per_cycle;
 };
 
 } // namespace omnigen

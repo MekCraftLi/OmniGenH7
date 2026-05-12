@@ -52,6 +52,7 @@ private:
     uint16_t calc_triangle_sample(uint32_t phase_index) const;
     uint16_t calc_saw_sample(uint32_t phase_index) const;
     uint16_t calc_square_sample(uint32_t phase_index) const;
+    [[nodiscard]] uint32_t active_wave_table_size() const;
     uint16_t convert_mv_to_dac_code(int32_t mv) const;
     int32_t calc_level_mv_from_norm(int32_t norm_milli) const;
     Result<void> start_dma();
@@ -83,6 +84,7 @@ private:
     uint32_t run_count_{0U};
     uint32_t timer_input_hz_{0U};
     uint32_t sample_rate_hz_{kDefaultFreqHz * kWaveTableSize};
+    uint16_t wave_table_size_{kWaveTableSize};
     uint32_t tim6_top_ticks_{0U};
     uint32_t dma_error_count_{0U};
     uint16_t wave_buffer_[kWaveTableSize]{};

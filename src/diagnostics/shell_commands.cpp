@@ -74,6 +74,62 @@ static bool ensure_engine(const struct shell* sh) {
     return true;
 }
 
+static bool parse_frequency_mhz(const char* text, uint32_t* out_mhz) {
+    if (text == nullptr || out_mhz == nullptr || text[0] == '\0') {
+        return false;
+    }
+
+    uint64_t hz = 0U;
+    uint32_t frac_mhz = 0U;
+    uint32_t frac_scale = 100U;
+    bool seen_digit = false;
+    bool seen_dot = false;
+
+    for (const char* p = text; *p != '\0'; ++p) {
+        if (*p == '.') {
+            if (seen_dot) {
+                return false;
+            }
+            seen_dot = true;
+            continue;
+        }
+
+        if (*p < '0' || *p > '9') {
+            return false;
+        }
+
+        seen_digit = true;
+        const uint32_t digit = static_cast<uint32_t>(*p - '0');
+        if (!seen_dot) {
+            hz = hz * 10U + digit;
+            if (hz > 4294967U) {
+                return false;
+            }
+        } else if (frac_scale > 0U) {
+            frac_mhz += digit * frac_scale;
+            frac_scale /= 10U;
+        }
+    }
+
+    if (!seen_digit) {
+        return false;
+    }
+
+    *out_mhz = static_cast<uint32_t>(hz * 1000U + frac_mhz);
+    return true;
+}
+
+static void print_frequency_hz(const struct shell* sh, const char* label, FrequencyHz frequency) {
+    const uint32_t hz = frequency.value / 1000U;
+    const uint32_t mhz = frequency.value % 1000U;
+
+    if (mhz == 0U) {
+        shell_print(sh, "%s%u Hz", label, hz);
+    } else {
+        shell_print(sh, "%s%u.%03u Hz", label, hz, mhz);
+    }
+}
+
 /* ------- command handlers ------------------------------------------------------------------------------------------*/
 
 static int cmd_signal_start(const struct shell* sh, size_t argc, char** argv) {
@@ -149,14 +205,19 @@ static int cmd_signal_freq(const struct shell* sh, size_t argc, char** argv) {
         return -1;
     }
 
-    uint32_t freq = static_cast<uint32_t>(atoi(argv[1]));
+    uint32_t freq_mhz = 0U;
+    if (!parse_frequency_mhz(argv[1], &freq_mhz)) {
+        shell_error(sh, "Invalid frequency: use Hz, e.g. 1000 or 1234.567");
+        return -1;
+    }
+
     auto result   = g_signal_engine->handle_command(
-        SignalCommand::make_set_frequency(CommandSource::Shell, FrequencyHz{freq}));
+        SignalCommand::make_set_frequency(CommandSource::Shell, FrequencyHz{freq_mhz}));
     if (result.is_error()) {
         shell_error(sh, "Failed to set frequency: error %d", static_cast<int>(result.error()));
         return -1;
     }
-    shell_print(sh, "Frequency set to %u Hz", freq);
+    print_frequency_hz(sh, "Frequency set to ", FrequencyHz{freq_mhz});
     return 0;
 }
 
@@ -298,8 +359,8 @@ static int cmd_signal_help(const struct shell* sh, size_t argc, char** argv) {
     shell_print(sh, "  signal duty <0..1000>");
     shell_print(sh, "examples:");
     shell_print(sh, "  signal waveform sine");
-    shell_print(sh, "  signal freq 1000");
-    shell_print(sh, "  signal sample_rate 64000");
+    shell_print(sh, "  signal freq 1000.5");
+    shell_print(sh, "  signal sample_rate 64032");
     shell_print(sh, "  signal amp 2000");
     shell_print(sh, "  signal offset 1650");
     shell_print(sh, "  signal duty 500");
@@ -317,8 +378,9 @@ static int cmd_signal_status(const struct shell* sh, size_t argc, char** argv) {
     shell_print(sh, "Signal Engine Status:");
     shell_print(sh, "- State: %s", state_to_string(snapshot.state));
     shell_print(sh, "- Waveform: %s", waveform_to_string(snapshot.active_profile.kind));
-    shell_print(sh, "- Frequency: %u Hz", snapshot.active_profile.frequency.value);
+    print_frequency_hz(sh, "- Frequency: ", snapshot.active_profile.frequency);
     shell_print(sh, "- Sample Rate: %u Hz", snapshot.active_profile.sample_rate.value);
+    shell_print(sh, "- Samples/Cycle: %u", snapshot.active_profile.samples_per_cycle);
     shell_print(sh, "- Amplitude: %d mV", snapshot.active_profile.amplitude.value);
     shell_print(sh, "- Offset: %d mV", snapshot.active_profile.offset.value);
     shell_print(sh, "- Duty: %u/1000", snapshot.active_profile.duty.value);
