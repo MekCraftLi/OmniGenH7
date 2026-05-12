@@ -8,8 +8,11 @@
  * Shell commands for development and testing:
  * - signal start/stop/pause/resume
  * - signal freq <hz>
+ * - signal sample_rate <hz>
  * - signal amp <mv>
- * - signal waveform <sine|square|triangle|sawtooth>
+ * - signal offset <mv>
+ * - signal duty <permille>
+ * - signal waveform <sine|square|pwm|triangle|sawtooth>
  * - signal status
  *
  *******************************************************************************

@@ -298,6 +298,30 @@
 };
 
 /*
+ * Enable DAC1 peripheral for analog output (DAC channel 1 on PA4).
+ */
+&dac1 {
+    pinctrl-0 = <&dac1_out1_pa4>;
+    pinctrl-names = "default";
+    dmas = <&dmamux1 0 67 (STM32_DMA_MODE_CYCLIC | STM32_DMA_PERIPH_TX | STM32_DMA_PRIORITY_HIGH | STM32_DMA_16BITS)>;
+    dma-names = "tx";
+    status = "okay";
+};
+
+/*
+ * Enable TIM6 base timer and its counter child node.
+ * TIM6 update event (TRGO=UPDATE) is used as DAC trigger source in runtime code.
+ */
+&timers6 {
+    st,mastermode = "UPDATE";
+    status = "okay";
+
+    counter {
+        status = "okay";
+    };
+};
+
+/*
  * LSE (低速外部晶振) 配置
  * 通常用于 RTC
  */

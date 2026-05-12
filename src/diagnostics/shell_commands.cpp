@@ -3,36 +3,16 @@
  * @file    shell_commands.cpp
  * @brief   Shell commands implementation for signal engine testing
  *******************************************************************************
- * @attention
- *
- * Implements Zephyr shell commands for signal engine control.
- * Commands are under "signal" subcommand group.
- *
- *******************************************************************************
- * @note
- *
- * Usage examples:
- * - signal start
- * - signal stop
- * - signal freq 1000
- * - signal amp 1500
- * - signal waveform sine
- * - signal status
- *
- *******************************************************************************
- * @author  MekLi
- * @date    2025/05/06
- * @version 1.0
- *******************************************************************************
  */
 
 /* ------- include ---------------------------------------------------------------------------------------------------*/
 
 #include "diagnostics/shell_commands.hpp"
 
-#include <zephyr/shell/shell.h>
-#include <zephyr/logging/log.h>
 #include <stdlib.h>
+#include <string.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/shell/shell.h>
 
 LOG_MODULE_REGISTER(signal_shell, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -42,210 +22,333 @@ namespace omnigen {
 
 static SignalEngine* g_signal_engine = nullptr;
 
-/* ------- function implement ----------------------------------------------------------------------------------------*/
+/* ------- helpers ---------------------------------------------------------------------------------------------------*/
 
-static int cmd_signal_start(const struct shell *sh, size_t argc, char **argv)
-{
+static const char* state_to_string(SignalEngineState state) {
+    switch (state) {
+        case SignalEngineState::Idle:
+            return "Idle";
+        case SignalEngineState::Editing:
+            return "Editing";
+        case SignalEngineState::Arming:
+            return "Arming";
+        case SignalEngineState::Running:
+            return "Running";
+        case SignalEngineState::Paused:
+            return "Paused";
+        case SignalEngineState::Stopping:
+            return "Stopping";
+        case SignalEngineState::Fault:
+            return "Fault";
+        default:
+            return "Unknown";
+    }
+}
+
+static const char* waveform_to_string(WaveformKind kind) {
+    switch (kind) {
+        case WaveformKind::None:
+            return "None";
+        case WaveformKind::Sine:
+            return "Sine";
+        case WaveformKind::Square:
+            return "Square";
+        case WaveformKind::Pwm:
+            return "PWM";
+        case WaveformKind::Triangle:
+            return "Triangle";
+        case WaveformKind::Sawtooth:
+            return "Sawtooth";
+        case WaveformKind::Arbitrary:
+            return "Arbitrary";
+        default:
+            return "Unknown";
+    }
+}
+
+static bool ensure_engine(const struct shell* sh) {
+    if (g_signal_engine == nullptr) {
+        shell_error(sh, "Signal engine not initialized");
+        return false;
+    }
+    return true;
+}
+
+/* ------- command handlers ------------------------------------------------------------------------------------------*/
+
+static int cmd_signal_start(const struct shell* sh, size_t argc, char** argv) {
     (void)argc;
     (void)argv;
-
-    if (!g_signal_engine) {
-        shell_error(sh, "Signal engine not initialized");
+    if (!ensure_engine(sh)) {
         return -1;
     }
 
-    auto cmd = SignalCommand::make_start(CommandSource::Shell);
-    auto result = g_signal_engine->handle_command(cmd);
-
-    if (result.is_ok()) {
-        shell_print(sh, "Signal started");
-        return 0;
-    } else {
+    auto result = g_signal_engine->handle_command(SignalCommand::make_start(CommandSource::Shell));
+    if (result.is_error()) {
         shell_error(sh, "Failed to start: error %d", static_cast<int>(result.error()));
         return -1;
     }
+    shell_print(sh, "Signal started");
+    return 0;
 }
 
-static int cmd_signal_stop(const struct shell *sh, size_t argc, char **argv)
-{
+static int cmd_signal_stop(const struct shell* sh, size_t argc, char** argv) {
     (void)argc;
     (void)argv;
-
-    if (!g_signal_engine) {
-        shell_error(sh, "Signal engine not initialized");
+    if (!ensure_engine(sh)) {
         return -1;
     }
 
-    auto cmd = SignalCommand::make_stop(CommandSource::Shell);
-    auto result = g_signal_engine->handle_command(cmd);
-
-    if (result.is_ok()) {
-        shell_print(sh, "Signal stopped");
-        return 0;
-    } else {
+    auto result = g_signal_engine->handle_command(SignalCommand::make_stop(CommandSource::Shell));
+    if (result.is_error()) {
         shell_error(sh, "Failed to stop: error %d", static_cast<int>(result.error()));
         return -1;
     }
+    shell_print(sh, "Signal stopped");
+    return 0;
 }
 
-static int cmd_signal_pause(const struct shell *sh, size_t argc, char **argv)
-{
+static int cmd_signal_pause(const struct shell* sh, size_t argc, char** argv) {
     (void)argc;
     (void)argv;
-
-    if (!g_signal_engine) {
-        shell_error(sh, "Signal engine not initialized");
+    if (!ensure_engine(sh)) {
         return -1;
     }
 
-    auto cmd = SignalCommand::make_pause(CommandSource::Shell);
-    auto result = g_signal_engine->handle_command(cmd);
-
-    if (result.is_ok()) {
-        shell_print(sh, "Signal paused");
-        return 0;
-    } else {
+    auto result = g_signal_engine->handle_command(SignalCommand::make_pause(CommandSource::Shell));
+    if (result.is_error()) {
         shell_error(sh, "Failed to pause: error %d", static_cast<int>(result.error()));
         return -1;
     }
+    shell_print(sh, "Signal paused");
+    return 0;
 }
 
-static int cmd_signal_resume(const struct shell *sh, size_t argc, char **argv)
-{
+static int cmd_signal_resume(const struct shell* sh, size_t argc, char** argv) {
     (void)argc;
     (void)argv;
-
-    if (!g_signal_engine) {
-        shell_error(sh, "Signal engine not initialized");
+    if (!ensure_engine(sh)) {
         return -1;
     }
 
-    auto cmd = SignalCommand::make_resume(CommandSource::Shell);
-    auto result = g_signal_engine->handle_command(cmd);
-
-    if (result.is_ok()) {
-        shell_print(sh, "Signal resumed");
-        return 0;
-    } else {
+    auto result = g_signal_engine->handle_command(SignalCommand::make_resume(CommandSource::Shell));
+    if (result.is_error()) {
         shell_error(sh, "Failed to resume: error %d", static_cast<int>(result.error()));
         return -1;
     }
+    shell_print(sh, "Signal resumed");
+    return 0;
 }
 
-static int cmd_signal_freq(const struct shell *sh, size_t argc, char **argv)
-{
+static int cmd_signal_freq(const struct shell* sh, size_t argc, char** argv) {
     if (argc < 2) {
         shell_error(sh, "Usage: signal freq <hz>");
         return -1;
     }
-
-    if (!g_signal_engine) {
-        shell_error(sh, "Signal engine not initialized");
+    if (!ensure_engine(sh)) {
         return -1;
     }
 
     uint32_t freq = static_cast<uint32_t>(atoi(argv[1]));
-    auto cmd = SignalCommand::make_set_frequency(CommandSource::Shell, FrequencyHz{freq});
-    auto result = g_signal_engine->handle_command(cmd);
-
-    if (result.is_ok()) {
-        shell_print(sh, "Frequency set to %u Hz", freq);
-        return 0;
-    } else {
+    auto result   = g_signal_engine->handle_command(
+        SignalCommand::make_set_frequency(CommandSource::Shell, FrequencyHz{freq}));
+    if (result.is_error()) {
         shell_error(sh, "Failed to set frequency: error %d", static_cast<int>(result.error()));
         return -1;
     }
+    shell_print(sh, "Frequency set to %u Hz", freq);
+    return 0;
 }
 
-static int cmd_signal_amp(const struct shell *sh, size_t argc, char **argv)
-{
+static int cmd_signal_sample_rate(const struct shell* sh, size_t argc, char** argv) {
+    if (argc < 2) {
+        shell_error(sh, "Usage: signal sample_rate <hz>");
+        return -1;
+    }
+    if (!ensure_engine(sh)) {
+        return -1;
+    }
+
+    uint32_t sample_rate = static_cast<uint32_t>(atoi(argv[1]));
+    auto result          = g_signal_engine->handle_command(
+        SignalCommand::make_set_sample_rate(CommandSource::Shell, SampleRateHz{sample_rate}));
+    if (result.is_error()) {
+        shell_error(sh, "Failed to set sample_rate: error %d", static_cast<int>(result.error()));
+        return -1;
+    }
+    shell_print(sh, "Sample rate set to %u Hz", sample_rate);
+    return 0;
+}
+
+static int cmd_signal_amp(const struct shell* sh, size_t argc, char** argv) {
     if (argc < 2) {
         shell_error(sh, "Usage: signal amp <mv>");
         return -1;
     }
-
-    if (!g_signal_engine) {
-        shell_error(sh, "Signal engine not initialized");
+    if (!ensure_engine(sh)) {
         return -1;
     }
 
     int32_t amp = atoi(argv[1]);
-    auto cmd = SignalCommand::make_set_amplitude(CommandSource::Shell, VoltageMv{amp});
-    auto result = g_signal_engine->handle_command(cmd);
-
-    if (result.is_ok()) {
-        shell_print(sh, "Amplitude set to %d mV", amp);
-        return 0;
-    } else {
+    auto result = g_signal_engine->handle_command(
+        SignalCommand::make_set_amplitude(CommandSource::Shell, VoltageMv{amp}));
+    if (result.is_error()) {
         shell_error(sh, "Failed to set amplitude: error %d", static_cast<int>(result.error()));
         return -1;
     }
-}
-
-static int cmd_signal_status(const struct shell *sh, size_t argc, char **argv)
-{
-    (void)argc;
-    (void)argv;
-
-    if (!g_signal_engine) {
-        shell_error(sh, "Signal engine not initialized");
-        return -1;
-    }
-
-    auto snapshot = g_signal_engine->snapshot();
-    const char* state_str = "Unknown";
-
-    switch (snapshot.state) {
-        case SignalEngineState::Idle:    state_str = "Idle"; break;
-        case SignalEngineState::Editing: state_str = "Editing"; break;
-        case SignalEngineState::Arming:  state_str = "Arming"; break;
-        case SignalEngineState::Running: state_str = "Running"; break;
-        case SignalEngineState::Paused:  state_str = "Paused"; break;
-        case SignalEngineState::Stopping: state_str = "Stopping"; break;
-        case SignalEngineState::Fault:   state_str = "Fault"; break;
-    }
-
-    const char* waveform_str = "Unknown";
-    switch (snapshot.active_profile.kind) {
-        case WaveformKind::None:      waveform_str = "None"; break;
-        case WaveformKind::Sine:      waveform_str = "Sine"; break;
-        case WaveformKind::Square:    waveform_str = "Square"; break;
-        case WaveformKind::Triangle:  waveform_str = "Triangle"; break;
-        case WaveformKind::Sawtooth:  waveform_str = "Sawtooth"; break;
-        case WaveformKind::Arbitrary: waveform_str = "Arbitrary"; break;
-    }
-
-    shell_print(sh, "Signal Engine Status:");
-    shell_print(sh, "  State: %s", state_str);
-    shell_print(sh, "  Waveform: %s", waveform_str);
-    shell_print(sh, "  Frequency: %u Hz", snapshot.active_profile.frequency.value);
-    shell_print(sh, "  Amplitude: %d mV", snapshot.active_profile.amplitude.value);
-    shell_print(sh, "  Offset: %d mV", snapshot.active_profile.offset.value);
-    shell_print(sh, "  Sample Rate: %u Hz", snapshot.active_profile.sample_rate.value);
-    shell_print(sh, "  Commands: %u", snapshot.command_count);
-
+    shell_print(sh, "Amplitude set to %d mV", amp);
     return 0;
 }
 
-/* ------- shell command definitions ----------------------------------------------------------------------------------*/
+static int cmd_signal_offset(const struct shell* sh, size_t argc, char** argv) {
+    if (argc < 2) {
+        shell_error(sh, "Usage: signal offset <mv>");
+        return -1;
+    }
+    if (!ensure_engine(sh)) {
+        return -1;
+    }
 
-SHELL_STATIC_SUBCMD_SET_CREATE(sub_signal,
+    int32_t offset = atoi(argv[1]);
+    auto result    = g_signal_engine->handle_command(
+        SignalCommand::make_set_offset(CommandSource::Shell, VoltageMv{offset}));
+    if (result.is_error()) {
+        shell_error(sh, "Failed to set offset: error %d", static_cast<int>(result.error()));
+        return -1;
+    }
+    shell_print(sh, "Offset set to %d mV", offset);
+    return 0;
+}
+
+static int cmd_signal_duty(const struct shell* sh, size_t argc, char** argv) {
+    if (argc < 2) {
+        shell_error(sh, "Usage: signal duty <permille 0..1000>");
+        return -1;
+    }
+    if (!ensure_engine(sh)) {
+        return -1;
+    }
+
+    int32_t duty_raw = atoi(argv[1]);
+    if (duty_raw < 0 || duty_raw > 1000) {
+        shell_error(sh, "Duty out of range: 0..1000");
+        return -1;
+    }
+
+    auto result = g_signal_engine->handle_command(
+        SignalCommand::make_set_duty(CommandSource::Shell, DutyPermille{static_cast<uint16_t>(duty_raw)}));
+    if (result.is_error()) {
+        shell_error(sh, "Failed to set duty: error %d", static_cast<int>(result.error()));
+        return -1;
+    }
+    shell_print(sh, "Duty set to %d/1000", duty_raw);
+    return 0;
+}
+
+static int cmd_signal_waveform(const struct shell* sh, size_t argc, char** argv) {
+    if (argc < 2) {
+        shell_error(sh, "Usage: signal waveform <sine|triangle|saw|square|pwm>");
+        return -1;
+    }
+    if (!ensure_engine(sh)) {
+        return -1;
+    }
+
+    WaveformKind kind = WaveformKind::None;
+    if (strcmp(argv[1], "sine") == 0) {
+        kind = WaveformKind::Sine;
+    } else if (strcmp(argv[1], "triangle") == 0) {
+        kind = WaveformKind::Triangle;
+    } else if (strcmp(argv[1], "saw") == 0 || strcmp(argv[1], "sawtooth") == 0) {
+        kind = WaveformKind::Sawtooth;
+    } else if (strcmp(argv[1], "square") == 0) {
+        kind = WaveformKind::Square;
+    } else if (strcmp(argv[1], "pwm") == 0) {
+        kind = WaveformKind::Pwm;
+    } else {
+        shell_error(sh, "Unknown waveform: %s", argv[1]);
+        return -1;
+    }
+
+    auto result = g_signal_engine->handle_command(
+        SignalCommand::make_set_waveform(CommandSource::Shell, kind));
+    if (result.is_error()) {
+        shell_error(sh, "Failed to set waveform: error %d", static_cast<int>(result.error()));
+        return -1;
+    }
+    shell_print(sh, "Waveform set to %s", argv[1]);
+    return 0;
+}
+
+static int cmd_signal_help(const struct shell* sh, size_t argc, char** argv) {
+    (void)argc;
+    (void)argv;
+
+    shell_print(sh, "signal commands:");
+    shell_print(sh, "  signal start");
+    shell_print(sh, "  signal stop");
+    shell_print(sh, "  signal pause");
+    shell_print(sh, "  signal resume");
+    shell_print(sh, "  signal status");
+    shell_print(sh, "  signal waveform <sine|triangle|saw|square|pwm>");
+    shell_print(sh, "  signal freq <hz>");
+    shell_print(sh, "  signal sample_rate <hz>");
+    shell_print(sh, "  signal amp <mv>");
+    shell_print(sh, "  signal offset <mv>");
+    shell_print(sh, "  signal duty <0..1000>");
+    shell_print(sh, "examples:");
+    shell_print(sh, "  signal waveform sine");
+    shell_print(sh, "  signal freq 1000");
+    shell_print(sh, "  signal sample_rate 64000");
+    shell_print(sh, "  signal amp 2000");
+    shell_print(sh, "  signal offset 1650");
+    shell_print(sh, "  signal duty 500");
+    return 0;
+}
+
+static int cmd_signal_status(const struct shell* sh, size_t argc, char** argv) {
+    (void)argc;
+    (void)argv;
+    if (!ensure_engine(sh)) {
+        return -1;
+    }
+
+    const auto snapshot = g_signal_engine->snapshot();
+    shell_print(sh, "Signal Engine Status:");
+    shell_print(sh, "- State: %s", state_to_string(snapshot.state));
+    shell_print(sh, "- Waveform: %s", waveform_to_string(snapshot.active_profile.kind));
+    shell_print(sh, "- Frequency: %u Hz", snapshot.active_profile.frequency.value);
+    shell_print(sh, "- Sample Rate: %u Hz", snapshot.active_profile.sample_rate.value);
+    shell_print(sh, "- Amplitude: %d mV", snapshot.active_profile.amplitude.value);
+    shell_print(sh, "- Offset: %d mV", snapshot.active_profile.offset.value);
+    shell_print(sh, "- Duty: %u/1000", snapshot.active_profile.duty.value);
+    shell_print(sh, "- Commands: %u", snapshot.command_count);
+    return 0;
+}
+
+/* ------- shell command definitions ---------------------------------------------------------------------------------*/
+
+SHELL_STATIC_SUBCMD_SET_CREATE(
+    sub_signal,
     SHELL_CMD(start, NULL, "Start signal output", cmd_signal_start),
     SHELL_CMD(stop, NULL, "Stop signal output", cmd_signal_stop),
     SHELL_CMD(pause, NULL, "Pause signal output", cmd_signal_pause),
     SHELL_CMD(resume, NULL, "Resume signal output", cmd_signal_resume),
     SHELL_CMD(freq, NULL, "Set frequency (Hz)", cmd_signal_freq),
+    SHELL_CMD(sample_rate, NULL, "Set sample rate (Hz)", cmd_signal_sample_rate),
     SHELL_CMD(amp, NULL, "Set amplitude (mV)", cmd_signal_amp),
+    SHELL_CMD(offset, NULL, "Set offset (mV)", cmd_signal_offset),
+    SHELL_CMD(duty, NULL, "Set duty (permille)", cmd_signal_duty),
+    SHELL_CMD(waveform, NULL, "Set waveform type", cmd_signal_waveform),
+    SHELL_CMD(help, NULL, "Show signal command help", cmd_signal_help),
     SHELL_CMD(status, NULL, "Show signal status", cmd_signal_status),
-    SHELL_SUBCMD_SET_END
-);
+    SHELL_SUBCMD_SET_END);
 
 SHELL_CMD_REGISTER(signal, &sub_signal, "Signal generator commands", NULL);
 
 /* ------- public functions ------------------------------------------------------------------------------------------*/
 
-void register_signal_shell_commands(SignalEngine& engine)
-{
+void register_signal_shell_commands(SignalEngine& engine) {
     g_signal_engine = &engine;
     LOG_INF("Signal shell commands registered");
 }

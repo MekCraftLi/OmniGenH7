@@ -30,18 +30,11 @@ namespace omnigen {
 /* ------- function implement ----------------------------------------------------------------------------------------*/
 
 SignalEngine::SignalEngine(WaveSinkPort& sink)
-    : sink_(sink)
-    , state_(SignalEngineState::Idle)
-    , active_profile_(get_default_signal_profile())
-    , pending_profile_(get_default_signal_profile())
-    , limits_(get_default_signal_limits())
-    , last_fault_(ErrorCode::Ok)
-    , command_count_(0)
-{
-}
+    : sink_(sink), state_(SignalEngineState::Idle), active_profile_(get_default_signal_profile()),
+      pending_profile_(get_default_signal_profile()), limits_(get_default_signal_limits()), last_fault_(ErrorCode::Ok),
+      command_count_(0) {}
 
-Result<void> SignalEngine::handle_command(const SignalCommand& command)
-{
+Result<void> SignalEngine::handle_command(const SignalCommand& command) {
     command_count_++;
 
     switch (command.kind) {
@@ -60,11 +53,20 @@ Result<void> SignalEngine::handle_command(const SignalCommand& command)
         case SignalCommandKind::SetFrequency:
             return handle_set_frequency(command.frequency);
 
+        case SignalCommandKind::SetSampleRate:
+            return handle_set_sample_rate(command.sample_rate);
+
         case SignalCommandKind::SetAmplitude:
             return handle_set_amplitude(command.amplitude);
 
+        case SignalCommandKind::SetOffset:
+            return handle_set_offset(command.offset);
+
         case SignalCommandKind::SetWaveform:
             return handle_set_waveform(command.waveform);
+
+        case SignalCommandKind::SetDuty:
+            return handle_set_duty(command.duty);
 
         case SignalCommandKind::ClearFault:
             return handle_clear_fault();
@@ -74,27 +76,23 @@ Result<void> SignalEngine::handle_command(const SignalCommand& command)
     }
 }
 
-SignalEngineSnapshot SignalEngine::snapshot() const
-{
+SignalEngineSnapshot SignalEngine::snapshot() const {
     return SignalEngineSnapshot{
-        .state = state_,
-        .active_profile = active_profile_,
+        .state             = state_,
+        .active_profile    = active_profile_,
         .selected_waveform = selected_waveform_,
-        .last_fault = last_fault_,
-        .command_count = command_count_,
+        .last_fault        = last_fault_,
+        .command_count     = command_count_,
     };
 }
 
-bool SignalEngine::is_output_active() const
-{
-    return state_ == SignalEngineState::Running ||
-           state_ == SignalEngineState::Arming;
+bool SignalEngine::is_output_active() const {
+    return state_ == SignalEngineState::Running || state_ == SignalEngineState::Arming;
 }
 
 /* ------- private methods -------------------------------------------------------------------------------------------*/
 
-Result<void> SignalEngine::handle_start()
-{
+Result<void> SignalEngine::handle_start() {
     if (state_ != SignalEngineState::Idle) {
         return ErrorCode::InvalidState;
     }
@@ -129,10 +127,8 @@ Result<void> SignalEngine::handle_start()
     return ErrorCode::Ok;
 }
 
-Result<void> SignalEngine::handle_stop()
-{
-    if (state_ != SignalEngineState::Running &&
-        state_ != SignalEngineState::Paused) {
+Result<void> SignalEngine::handle_stop() {
+    if (state_ != SignalEngineState::Running && state_ != SignalEngineState::Paused) {
         return ErrorCode::InvalidState;
     }
 
@@ -147,8 +143,7 @@ Result<void> SignalEngine::handle_stop()
     return ErrorCode::Ok;
 }
 
-Result<void> SignalEngine::handle_pause()
-{
+Result<void> SignalEngine::handle_pause() {
     if (state_ != SignalEngineState::Running) {
         return ErrorCode::InvalidState;
     }
@@ -164,8 +159,7 @@ Result<void> SignalEngine::handle_pause()
     return ErrorCode::Ok;
 }
 
-Result<void> SignalEngine::handle_resume()
-{
+Result<void> SignalEngine::handle_resume() {
     if (state_ != SignalEngineState::Paused) {
         return ErrorCode::InvalidState;
     }
@@ -181,16 +175,16 @@ Result<void> SignalEngine::handle_resume()
     return ErrorCode::Ok;
 }
 
-Result<void> SignalEngine::handle_set_frequency(FrequencyHz freq)
-{
+Result<void> SignalEngine::handle_set_frequency(FrequencyHz freq) {
     if (state_ == SignalEngineState::Running) {
         return ErrorCode::InvalidState;
     }
 
     SignalProfile new_profile = active_profile_;
-    new_profile.frequency = freq;
+    new_profile.frequency     = freq;
+    new_profile.sample_rate   = SampleRateHz{freq.value * 64U};
 
-    Result<void> validation = validate_signal_profile(new_profile, limits_);
+    Result<void> validation   = validate_signal_profile(new_profile, limits_);
     if (validation.is_error()) {
         return validation.error();
     }
@@ -199,16 +193,15 @@ Result<void> SignalEngine::handle_set_frequency(FrequencyHz freq)
     return ErrorCode::Ok;
 }
 
-Result<void> SignalEngine::handle_set_amplitude(VoltageMv amp)
-{
+Result<void> SignalEngine::handle_set_sample_rate(SampleRateHz sample_rate) {
     if (state_ == SignalEngineState::Running) {
         return ErrorCode::InvalidState;
     }
 
     SignalProfile new_profile = active_profile_;
-    new_profile.amplitude = amp;
+    new_profile.sample_rate   = sample_rate;
 
-    Result<void> validation = validate_signal_profile(new_profile, limits_);
+    Result<void> validation   = validate_signal_profile(new_profile, limits_);
     if (validation.is_error()) {
         return validation.error();
     }
@@ -217,18 +210,75 @@ Result<void> SignalEngine::handle_set_amplitude(VoltageMv amp)
     return ErrorCode::Ok;
 }
 
-Result<void> SignalEngine::handle_set_waveform(WaveformKind kind)
-{
+Result<void> SignalEngine::handle_set_amplitude(VoltageMv amp) {
     if (state_ == SignalEngineState::Running) {
         return ErrorCode::InvalidState;
     }
 
-    active_profile_.kind = kind;
+    SignalProfile new_profile = active_profile_;
+    new_profile.amplitude     = amp;
+
+    Result<void> validation   = validate_signal_profile(new_profile, limits_);
+    if (validation.is_error()) {
+        return validation.error();
+    }
+
+    active_profile_ = new_profile;
     return ErrorCode::Ok;
 }
 
-Result<void> SignalEngine::handle_clear_fault()
-{
+Result<void> SignalEngine::handle_set_offset(VoltageMv offset) {
+    if (state_ == SignalEngineState::Running) {
+        return ErrorCode::InvalidState;
+    }
+
+    SignalProfile new_profile = active_profile_;
+    new_profile.offset        = offset;
+
+    Result<void> validation   = validate_signal_profile(new_profile, limits_);
+    if (validation.is_error()) {
+        return validation.error();
+    }
+
+    active_profile_ = new_profile;
+    return ErrorCode::Ok;
+}
+
+Result<void> SignalEngine::handle_set_waveform(WaveformKind kind) {
+    if (state_ == SignalEngineState::Running) {
+        return ErrorCode::InvalidState;
+    }
+
+    SignalProfile new_profile = active_profile_;
+    new_profile.kind          = kind;
+
+    Result<void> validation   = validate_signal_profile(new_profile, limits_);
+    if (validation.is_error()) {
+        return validation.error();
+    }
+
+    active_profile_ = new_profile;
+    return ErrorCode::Ok;
+}
+
+Result<void> SignalEngine::handle_set_duty(DutyPermille duty) {
+    if (state_ == SignalEngineState::Running) {
+        return ErrorCode::InvalidState;
+    }
+
+    SignalProfile new_profile = active_profile_;
+    new_profile.duty          = duty;
+
+    Result<void> validation   = validate_signal_profile(new_profile, limits_);
+    if (validation.is_error()) {
+        return validation.error();
+    }
+
+    active_profile_ = new_profile;
+    return ErrorCode::Ok;
+}
+
+Result<void> SignalEngine::handle_clear_fault() {
     if (state_ != SignalEngineState::Fault) {
         return ErrorCode::InvalidState;
     }
@@ -238,15 +288,10 @@ Result<void> SignalEngine::handle_clear_fault()
     return ErrorCode::Ok;
 }
 
-bool SignalEngine::can_start() const
-{
-    return active_profile_.output_enabled ||
-           active_profile_.kind != WaveformKind::None;
+bool SignalEngine::can_start() const {
+    return active_profile_.output_enabled || active_profile_.kind != WaveformKind::None;
 }
 
-void SignalEngine::transition_to(SignalEngineState new_state)
-{
-    state_ = new_state;
-}
+void SignalEngine::transition_to(SignalEngineState new_state) { state_ = new_state; }
 
 } // namespace omnigen

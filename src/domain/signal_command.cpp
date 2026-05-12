@@ -75,6 +75,17 @@ SignalCommand SignalCommand::make_set_frequency(CommandSource src, FrequencyHz f
     cmd.source = src;
     cmd.sequence = ++g_command_sequence;
     cmd.frequency = freq;
+    cmd.sample_rate = SampleRateHz{0U};
+    return cmd;
+}
+
+SignalCommand SignalCommand::make_set_sample_rate(CommandSource src, SampleRateHz sample_rate)
+{
+    SignalCommand cmd{};
+    cmd.kind = SignalCommandKind::SetSampleRate;
+    cmd.source = src;
+    cmd.sequence = ++g_command_sequence;
+    cmd.sample_rate = sample_rate;
     return cmd;
 }
 
@@ -84,7 +95,30 @@ SignalCommand SignalCommand::make_set_amplitude(CommandSource src, VoltageMv amp
     cmd.kind = SignalCommandKind::SetAmplitude;
     cmd.source = src;
     cmd.sequence = ++g_command_sequence;
+    cmd.sample_rate = SampleRateHz{0U};
     cmd.amplitude = amp;
+    return cmd;
+}
+
+SignalCommand SignalCommand::make_set_offset(CommandSource src, VoltageMv offset)
+{
+    SignalCommand cmd{};
+    cmd.kind = SignalCommandKind::SetOffset;
+    cmd.source = src;
+    cmd.sequence = ++g_command_sequence;
+    cmd.sample_rate = SampleRateHz{0U};
+    cmd.offset = offset;
+    return cmd;
+}
+
+SignalCommand SignalCommand::make_set_duty(CommandSource src, DutyPermille duty)
+{
+    SignalCommand cmd{};
+    cmd.kind = SignalCommandKind::SetDuty;
+    cmd.source = src;
+    cmd.sequence = ++g_command_sequence;
+    cmd.sample_rate = SampleRateHz{0U};
+    cmd.duty = duty;
     return cmd;
 }
 
@@ -94,6 +128,7 @@ SignalCommand SignalCommand::make_set_waveform(CommandSource src, WaveformKind k
     cmd.kind = SignalCommandKind::SetWaveform;
     cmd.source = src;
     cmd.sequence = ++g_command_sequence;
+    cmd.sample_rate = SampleRateHz{0U};
     cmd.waveform = kind;
     return cmd;
 }

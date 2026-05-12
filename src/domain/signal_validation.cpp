@@ -77,8 +77,8 @@ Result<void> validate_signal_profile(
         return ErrorCode::InvalidArgument;
     }
 
-    /* Check duty cycle for square wave */
-    if (profile.kind == WaveformKind::Square) {
+    /* Check duty cycle for duty-based waveforms */
+    if (profile.kind == WaveformKind::Square || profile.kind == WaveformKind::Pwm) {
         if (profile.duty.value > 1000) {
             return ErrorCode::InvalidArgument;
         }

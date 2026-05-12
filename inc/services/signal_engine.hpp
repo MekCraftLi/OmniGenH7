@@ -94,8 +94,11 @@ private:
     Result<void> handle_pause();
     Result<void> handle_resume();
     Result<void> handle_set_frequency(FrequencyHz freq);
+    Result<void> handle_set_sample_rate(SampleRateHz sample_rate);
     Result<void> handle_set_amplitude(VoltageMv amp);
+    Result<void> handle_set_offset(VoltageMv offset);
     Result<void> handle_set_waveform(WaveformKind kind);
+    Result<void> handle_set_duty(DutyPermille duty);
     Result<void> handle_clear_fault();
 
     bool can_start() const;

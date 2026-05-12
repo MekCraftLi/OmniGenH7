@@ -38,6 +38,7 @@ enum class WaveformKind : uint8_t {
     None,
     Sine,
     Square,
+    Pwm,
     Triangle,
     Sawtooth,
     Arbitrary,

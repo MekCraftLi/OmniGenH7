@@ -44,6 +44,7 @@ enum class SignalCommandKind : uint8_t {
     Pause,
     Resume,
     SetFrequency,
+    SetSampleRate,
     SetAmplitude,
     SetOffset,
     SetWaveform,
@@ -77,6 +78,7 @@ struct SignalCommand {
 
     /* Command parameters (union would save space, but struct is simpler) */
     FrequencyHz frequency;
+    SampleRateHz sample_rate;
     VoltageMv amplitude;
     VoltageMv offset;
     WaveformKind waveform;
@@ -89,7 +91,10 @@ struct SignalCommand {
     static SignalCommand make_pause(CommandSource src);
     static SignalCommand make_resume(CommandSource src);
     static SignalCommand make_set_frequency(CommandSource src, FrequencyHz freq);
+    static SignalCommand make_set_sample_rate(CommandSource src, SampleRateHz sample_rate);
     static SignalCommand make_set_amplitude(CommandSource src, VoltageMv amp);
+    static SignalCommand make_set_offset(CommandSource src, VoltageMv offset);
+    static SignalCommand make_set_duty(CommandSource src, DutyPermille duty);
     static SignalCommand make_set_waveform(CommandSource src, WaveformKind kind);
     static SignalCommand make_clear_fault(CommandSource src);
 };
