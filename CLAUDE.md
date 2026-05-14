@@ -53,3 +53,22 @@ Follow Zephyr RTOS coding conventions (Linux kernel style with Zephyr-specific r
 ## Zephyr Submodule
 
 The `zephyr/` directory is a git submodule. The actual Zephyr base used for builds is typically in a west workspace (e.g., `~/zephyrproject/zephyr`).
+
+## Signal Simulation
+
+MATLAB installation: `C:\Program Files\MATLAB\R2024b\bin\matlab.exe`
+
+Simulation folder: `simulation/matlab/`
+- `waveform_generator.m` — Core waveform synthesis (matches firmware C++ algorithms exactly)
+- `dac_sim.m` — DAC output simulation: configure WAVEFORM/FREQ_HZ/AMPL_MV/OFFSET_MV and run
+- `dac_dual_sine.m` — Compare 100kHz vs 1kHz sine output
+
+To run simulation (PowerShell):
+```powershell
+& "C:\Program Files\MATLAB\R2024b\bin\matlab.exe" -nosplash -r "cd('simulation\matlab'); dac_sim;"
+```
+
+Firmware waveform algorithm locations for cross-reference:
+- `src/domain/waveform_synthesis.cpp` — Sine/Sq/Tri/Saw generation (LUT-based)
+- `inc/domain/waveform_synthesis.hpp` — Public API
+- `inc/domain/signal_profile.hpp` — Profile structs (WaveformKind, SignalLimits)

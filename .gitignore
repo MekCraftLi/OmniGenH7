@@ -1,2 +1,5 @@
 build/
+build_*/
 zephyr/
+.idea/
+build_warnings.log

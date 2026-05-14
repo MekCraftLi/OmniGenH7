@@ -28,6 +28,8 @@
 #include "composition_root.hpp"
 
 #include "platform/mock_wave_sink.hpp"
+#include "platform/zephyr_display.hpp"
+#include "platform/mpu_manager.hpp"
 #include "platform/zephyr_storage.hpp"
 #include "services/signal_engine.hpp"
 #include "diagnostics/shell_commands.hpp"
@@ -47,6 +49,7 @@ static bool g_system_ready = false;
 /* Port implementations (static storage) */
 static MockWaveSink g_wave_sink;
 static ZephyrStorage g_storage;
+static ZephyrDisplay g_display;
 
 /* Services (static storage) */
 static SignalEngine g_signal_engine(g_wave_sink);
@@ -55,9 +58,18 @@ static SignalEngine g_signal_engine(g_wave_sink);
 
 void init_system()
 {
+    MpuManager::init();
+
     auto storage_ret = g_storage.mount();
     if (storage_ret.is_error()) {
         LOG_WRN("External storage init failed: %d", static_cast<int>(storage_ret.error()));
+    }
+
+    auto display_ret = g_display.mount();
+    if (display_ret.is_error()) {
+        LOG_WRN("Display init failed: %d", static_cast<int>(display_ret.error()));
+    } else {
+        (void)g_display.clear(0x0000U);
     }
 
     LOG_INF("OmniGen H7 initializing...");

@@ -47,6 +47,8 @@
 
 LOG_MODULE_REGISTER(dac_wave_sink, CONFIG_LOG_DEFAULT_LEVEL);
 
+#if DT_HAS_COMPAT_STATUS_OKAY(mekcraft_dac_wave_sink)
+
 /* ============================================================================
  * Driver Data Structures
  * ============================================================================ */
@@ -114,7 +116,6 @@ static int init_dac(const struct device *dev)
 
 static int init_timer(const struct device *dev)
 {
-    const struct dac_wave_sink_config *cfg = dev->config;
     struct dac_wave_sink_data *data = dev->data;
 
     /* Initialize TIM6 HAL handle */
@@ -329,3 +330,5 @@ int dac_wave_sink_set_buffer(const struct device *dev, const uint16_t *samples, 
         NULL);
 
 DT_INST_FOREACH_STATUS_OKAY(DAC_WAVE_SINK_INIT)
+
+#endif /* DT_HAS_COMPAT_STATUS_OKAY(mekcraft_dac_wave_sink) */

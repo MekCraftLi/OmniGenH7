@@ -13,9 +13,12 @@ target_sources(app PRIVATE
     src/domain/waveform_synthesis.cpp
     src/services/signal_engine.cpp
     src/platform/mock_wave_sink.cpp
+    src/platform/mpu_manager.cpp
+    src/platform/zephyr_display.cpp
     src/platform/zephyr_storage.cpp
     src/platform/zephyr_wave_sink.cpp
     src/diagnostics/shell_commands.cpp
     drivers/output/dac_wave_sink.c
+    drivers/output/ili9481_support.c
     drivers/storage/w25q64_support.c
 )

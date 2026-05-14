@@ -1,0 +1,38 @@
+# Copyright (c) 2026 MekCraftLi
+# SPDX-License-Identifier: Apache-2.0
+
+description: ILI9481 panel on STM32 FMC 8080 16-bit mapped bus
+
+compatible: "zephyr,ili9481-fmc"
+
+include: base.yaml
+
+properties:
+  memory-region:
+    type: phandle
+    required: true
+    description: Phandle to memory@60000000 style mapped FMC region.
+
+  register-select-pin:
+    type: int
+    required: true
+    description: |
+      FMC address line index used as 8080 RS/DCX selector.
+      Data address offset is computed as (1 << (index + 1)).
+
+  reset-gpios:
+    type: phandle-array
+    required: false
+    description: Optional panel reset GPIO.
+
+  width:
+    type: int
+    required: false
+    default: 320
+    description: Logical panel width in pixels.
+
+  height:
+    type: int
+    required: false
+    default: 480
+    description: Logical panel height in pixels.

@@ -29,6 +29,7 @@
 /* ------- include ---------------------------------------------------------------------------------------------------*/
 
 #include "diagnostics/shell_commands.hpp"
+#include "drivers/ili9481_support.h"
 #include "drivers/w25q64_support.h"
 
 #include <errno.h>
@@ -247,6 +248,22 @@ static bool parse_u8_arg(const char* text, uint8_t* out_value) {
     return true;
 }
 
+static bool parse_u16_arg(const char* text, uint16_t* out_value) {
+    if (text == nullptr || out_value == nullptr || text[0] == '\0') {
+        return false;
+    }
+
+    char* end = nullptr;
+    errno = 0;
+    unsigned long value = strtoul(text, &end, 0);
+    if (errno != 0 || end == text || *end != '\0' || value > static_cast<unsigned long>(UINT16_MAX)) {
+        return false;
+    }
+
+    *out_value = static_cast<uint16_t>(value);
+    return true;
+}
+
 static bool parse_size_arg(const char* text, size_t* out_value) {
     if (text == nullptr || out_value == nullptr || text[0] == '\0') {
         return false;
@@ -282,6 +299,14 @@ static bool parse_addr_arg(const char* text, uint32_t* out_addr) {
 static int nor_check_ready(const struct shell* sh) {
     if (!w25q64_support_ready()) {
         shell_error(sh, "NOR not ready. Re-run: nor probe");
+        return -ENODEV;
+    }
+    return 0;
+}
+
+static int lcd_check_ready(const struct shell* sh) {
+    if (!ili9481_support_ready()) {
+        shell_error(sh, "LCD not ready. Re-run: lcd init");
         return -ENODEV;
     }
     return 0;
@@ -650,6 +675,154 @@ static int cmd_nor_probe(const struct shell* sh, size_t argc, char** argv) {
     }
 
     shell_print(sh, "NOR probe success");
+    return 0;
+}
+
+static int cmd_lcd_init(const struct shell* sh, size_t argc, char** argv) {
+    (void)argc;
+    (void)argv;
+
+    int ret = ili9481_support_init();
+    if (ret != 0) {
+        shell_error(sh, "LCD init failed: %d", ret);
+        return ret;
+    }
+
+    shell_print(sh, "LCD initialized");
+    return 0;
+}
+
+static int cmd_lcd_status(const struct shell* sh, size_t argc, char** argv) {
+    (void)argc;
+    (void)argv;
+
+    const bool ready = ili9481_support_ready();
+    shell_print(sh, "LCD status: %s", ready ? "ready" : "not ready");
+    if (!ready) {
+        shell_print(sh, "Run: lcd init");
+    }
+
+    return 0;
+}
+
+static int cmd_lcd_clear(const struct shell* sh, size_t argc, char** argv) {
+    if (argc != 2U) {
+        shell_error(sh, "Usage: lcd clear <color565>");
+        return -EINVAL;
+    }
+
+    int ret = lcd_check_ready(sh);
+    if (ret != 0) {
+        return ret;
+    }
+
+    uint16_t color = 0U;
+    if (!parse_u16_arg(argv[1], &color)) {
+        shell_error(sh, "Invalid color565: %s", argv[1]);
+        return -EINVAL;
+    }
+
+    ret = ili9481_support_clear(color);
+    if (ret != 0) {
+        shell_error(sh, "LCD clear failed: %d", ret);
+        return ret;
+    }
+
+    shell_print(sh, "LCD clear done: color=0x%04x", color);
+    return 0;
+}
+
+static int cmd_lcd_fill(const struct shell* sh, size_t argc, char** argv) {
+    if (argc != 6U) {
+        shell_error(sh, "Usage: lcd fill <x> <y> <w> <h> <color565>");
+        return -EINVAL;
+    }
+
+    int ret = lcd_check_ready(sh);
+    if (ret != 0) {
+        return ret;
+    }
+
+    uint16_t x = 0U;
+    uint16_t y = 0U;
+    uint16_t w = 0U;
+    uint16_t h = 0U;
+    uint16_t color = 0U;
+    if (!parse_u16_arg(argv[1], &x)) {
+        shell_error(sh, "Invalid x: %s", argv[1]);
+        return -EINVAL;
+    }
+    if (!parse_u16_arg(argv[2], &y)) {
+        shell_error(sh, "Invalid y: %s", argv[2]);
+        return -EINVAL;
+    }
+    if (!parse_u16_arg(argv[3], &w) || w == 0U) {
+        shell_error(sh, "Invalid w: %s", argv[3]);
+        return -EINVAL;
+    }
+    if (!parse_u16_arg(argv[4], &h) || h == 0U) {
+        shell_error(sh, "Invalid h: %s", argv[4]);
+        return -EINVAL;
+    }
+    if (!parse_u16_arg(argv[5], &color)) {
+        shell_error(sh, "Invalid color565: %s", argv[5]);
+        return -EINVAL;
+    }
+
+    ret = ili9481_support_fill_rect(x, y, w, h, color);
+    if (ret != 0) {
+        shell_error(sh, "LCD fill failed: %d", ret);
+        return ret;
+    }
+
+    shell_print(sh, "LCD fill done: x=%u y=%u w=%u h=%u color=0x%04x", x, y, w, h, color);
+    return 0;
+}
+
+static int cmd_lcd_test(const struct shell* sh, size_t argc, char** argv) {
+    (void)argc;
+    (void)argv;
+
+    int ret = lcd_check_ready(sh);
+    if (ret != 0) {
+        return ret;
+    }
+
+    static const uint16_t colors[] = {
+        0xF800U, /* red */
+        0x07E0U, /* green */
+        0x001FU, /* blue */
+        0xFFFFU, /* white */
+        0x0000U, /* black */
+    };
+
+    shell_print(sh, "LCD test start");
+    for (size_t i = 0U; i < (sizeof(colors) / sizeof(colors[0])); ++i) {
+        ret = ili9481_support_clear(colors[i]);
+        if (ret != 0) {
+            shell_error(sh, "LCD test failed at step %u: %d", static_cast<unsigned int>(i), ret);
+            return ret;
+        }
+        k_msleep(250);
+    }
+
+    ret = ili9481_support_fill_rect(0U, 0U, 80U, 80U, 0xF800U);
+    if (ret != 0) {
+        shell_error(sh, "LCD test fill #1 failed: %d", ret);
+        return ret;
+    }
+    ret = ili9481_support_fill_rect(80U, 0U, 80U, 80U, 0x07E0U);
+    if (ret != 0) {
+        shell_error(sh, "LCD test fill #2 failed: %d", ret);
+        return ret;
+    }
+    ret = ili9481_support_fill_rect(160U, 0U, 80U, 80U, 0x001FU);
+    if (ret != 0) {
+        shell_error(sh, "LCD test fill #3 failed: %d", ret);
+        return ret;
+    }
+
+    shell_print(sh, "LCD test done");
     return 0;
 }
 
@@ -1025,6 +1198,16 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
     SHELL_CMD(status, NULL, "Show signal status", cmd_signal_status), SHELL_SUBCMD_SET_END);
 
 SHELL_STATIC_SUBCMD_SET_CREATE(
+    sub_lcd,
+    SHELL_CMD(init, NULL, "Initialize ILI9481 panel", cmd_lcd_init),
+    SHELL_CMD(status, NULL, "Show LCD init status", cmd_lcd_status),
+    SHELL_CMD(clear, NULL, "Clear screen: lcd clear <color565>", cmd_lcd_clear),
+    SHELL_CMD(fill, NULL, "Fill rect: lcd fill <x> <y> <w> <h> <color565>", cmd_lcd_fill),
+    SHELL_CMD(test, NULL, "Run LCD color and block test", cmd_lcd_test),
+    SHELL_SUBCMD_SET_END
+);
+
+SHELL_STATIC_SUBCMD_SET_CREATE(
     sub_nor,
     SHELL_CMD(probe, NULL, "Probe/initialize NOR device", cmd_nor_probe),
     SHELL_CMD(info, NULL, "Show NOR capacity and JEDEC info", cmd_nor_info),
@@ -1039,6 +1222,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
 );
 
 SHELL_CMD_REGISTER(signal, &sub_signal, "Signal generator commands", NULL);
+SHELL_CMD_REGISTER(lcd, &sub_lcd, "ILI9481 LCD commands", NULL);
 SHELL_CMD_REGISTER(nor, &sub_nor, "NOR flash commands", NULL);
 SHELL_CMD_REGISTER(sysres, NULL,
                    "Show resource usage: sysres | sysres reset | sysres watch <period_ms> [count]", cmd_sysres);
