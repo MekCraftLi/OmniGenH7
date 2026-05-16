@@ -1,5 +1,5 @@
-%% dac_dual_sine.m — DAC Sine: 100kHz vs 1kHz
-%  Compare high-speed vs low-speed sine output quality
+%% dac_dual_sine.m - DAC Sine: 100kHz vs 1kHz
+%  Compare high-speed vs low-speed sine output quality.
 clear; close all;
 addpath(fileparts(mfilename('fullpath')));
 
@@ -42,4 +42,4 @@ ylim([-0.1, 3.4]);
 
 sgtitle('DAC Sine Output: 100 kHz vs 1 kHz (12-bit, Vref=3.3V)');
 fprintf('100 kHz: %d pts, step=%.2f us  |  1 kHz: %d pts, step=%.2f us\n', ...
-        length(dac1), 1e6/SAMPLE_RATE, length(dac2), 1e3/SAMPLE_RATE);
+        length(dac1), 1e6/SAMPLE_RATE, length(dac2), 1e6/SAMPLE_RATE);

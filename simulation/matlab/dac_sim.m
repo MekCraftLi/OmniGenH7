@@ -1,4 +1,4 @@
-%% dac_sim.m — OmniGenH7 DAC Output Simulation
+%% dac_sim.m - OmniGenH7 DAC Output Simulation
 %  All algorithms match firmware (src/domain/waveform_synthesis.cpp) exactly.
 clear; close all;
 addpath(fileparts(mfilename('fullpath')));
@@ -44,6 +44,6 @@ stairs(t_ms, v_out, 'LineWidth', 1.2);
 grid on;
 xlabel('Time (ms)');
 ylabel('Voltage (V)');
-title(sprintf('DAC Output — %s %d Hz (Ampl=%.1fVpp Offset=%.1fV)', ...
+title(sprintf('DAC Output - %s %d Hz (Ampl=%.1fVpp Offset=%.1fV)', ...
       WAVEFORM, FREQ_HZ, AMPL_MV/1000, OFFSET_MV/1000));
 ylim([-0.1, 3.4]);

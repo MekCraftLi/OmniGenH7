@@ -1,4 +1,4 @@
-%% dac_filter_design.m — DAC Reconstruction Filter Design
+%% dac_filter_design.m - DAC Reconstruction Filter Design
 %  Smooth stair-step DAC output back to clean sine via digital LPF.
 clear; close all;
 addpath(fileparts(mfilename('fullpath')));
@@ -31,7 +31,7 @@ v_1k_raw   = double(dac_1k_raw) / 4095 * VREF_MV / 1000;
 t_1k       = (0:length(dac_1k_raw)-1) / SAMPLE_RATE * 1e3;  % ms
 
 %% ===== Filter Design ===================================================
-%  Digital Butterworth LPF — bilinear transform, zero-phase (filtfilt)
+%  Digital Butterworth LPF, bilinear transform, zero-phase (filtfilt).
 
 % 100 kHz signal: fc = 120 kHz (above 100k signal, below 250k Nyquist)
 fc_100k = 120e3;
@@ -40,7 +40,7 @@ v_100k_filt = filtfilt(b100, a100, double(v_100k_raw));
 
 % 1 kHz signal: fc = 10 kHz (well above 1k signal)
 fc_1k = 10e3;
-[b1, a1] = butter(4, 1e3 / (SAMPLE_RATE / 2));  % wide open to show effect
+[b1, a1] = butter(4, fc_1k / (SAMPLE_RATE / 2));
 v_1k_filt_a = filtfilt(b1, a1, double(v_1k_raw));
 
 % 1 kHz signal: tighter fc = 2 kHz (closer to signal for better noise rejection)
@@ -77,7 +77,7 @@ title(sprintf('Filtered: 4th-Butter(120k) + RC(100k)'));
 legend([h1 h2], {'Butterworth 4th fc=120k', 'RC 1st fc=100k'}, 'Location', 'best');
 ylim([-0.1, 3.4]);
 
-% --- Row 2: 1 kHz (wide filter, fc=1k) ---
+% --- Row 2: 1 kHz (wide filter, fc=10k) ---
 subplot(3,2,3);
 stairs(t_1k, v_1k_raw, 'r-', 'LineWidth', 0.6);
 grid on; xlabel('Time (ms)'); ylabel('V');
@@ -89,7 +89,7 @@ hold on;
 stairs(t_1k, v_1k_raw, 'Color', [0.7 0.7 0.7], 'LineWidth', 0.4);
 plot(t_1k, v_1k_filt_a, 'r-', 'LineWidth', 1.5);
 hold off; grid on; xlabel('Time (ms)'); ylabel('V');
-title(sprintf('Filtered: 4th-Butter fc=1kHz (shallow)'));
+title(sprintf('Filtered: 4th-Butter fc=%.0fkHz (wide)', fc_1k/1e3));
 ylim([-0.1, 3.4]);
 
 % --- Row 3: 1 kHz (tight filter, fc=2k) ---
@@ -119,12 +119,12 @@ sgtitle('DAC Reconstruction Filter Design');
 %% ===== Print filter coefficients (for C implementation) ===============
 
 fprintf('\n=== Filter Coefficients (for firmware) ===\n');
-fprintf('100 kHz signal — 4th-order Butterworth fc=%.1f kHz:\n', fc_100k/1e3);
+fprintf('100 kHz signal - 4th-order Butterworth fc=%.1f kHz:\n', fc_100k/1e3);
 fprintf('  b = ['); fprintf('%.8f ', b100); fprintf(']\n');
 fprintf('  a = ['); fprintf('%.8f ', a100); fprintf(']\n\n');
-fprintf('1 kHz signal — 4th-order Butterworth fc=2.0 kHz:\n');
+fprintf('1 kHz signal - 4th-order Butterworth fc=2.0 kHz:\n');
 fprintf('  b = ['); fprintf('%.8f ', b1t); fprintf(']\n');
 fprintf('  a = ['); fprintf('%.8f ', a1t); fprintf(']\n');
 
 fprintf('\nRC analog (1st-order) fc=100 kHz:\n');
-fprintf('  R*C = %.3e  (e.g. R=1.59kΩ, C=1nF)\n', tau);
+fprintf('  R*C = %.3e  (e.g. R=1.59 kohm, C=1nF)\n', tau);
