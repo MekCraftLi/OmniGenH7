@@ -35,9 +35,10 @@ namespace omnigen {
 /*-------- 3. interface ----------------------------------------------------------------------------------------------*/
 
 /**
- * @brief Zephyr implementation of WaveSinkPort.
+ * @brief Zephyr DAC 波形输出适配类。
  *
- * Uses DAC + TIM + DMA for continuous waveform output.
+ * 该类把领域层的 `WaveSinkPort` 调用转换为板级 DAC 波形输出驱动操作，负责维护
+ * 当前配置、运行状态和本地样本缓冲区。
  */
 class ZephyrWaveSink : public WaveSinkPort {
 public:

@@ -31,6 +31,12 @@
 
 namespace omnigen {
 
+/**
+ * @brief Zephyr LCD 显示适配类。
+ *
+ * 该类实现 `DisplayPort`，将 C++ 显示端口调用转发到底层 ILI9481/FMC C 驱动。
+ * 内部记录初始化状态，便于请求总线查询显示模块可用性。
+ */
 class ZephyrDisplay : public DisplayPort {
 public:
     ZephyrDisplay() = default;

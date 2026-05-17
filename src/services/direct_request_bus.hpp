@@ -34,6 +34,12 @@ namespace omnigen {
 
 /*-------- 3. interface ----------------------------------------------------------------------------------------------*/
 
+/**
+ * @brief 进程内同步请求总线实现类。
+ *
+ * 将 `AppRequest` 直接分发到当前服务和端口实例，并现场收集状态或快照填入
+ * `AppResponse`。该实现不维护独立数据副本。
+ */
 class DirectRequestBus : public RequestBusPort {
 public:
     DirectRequestBus(SignalEngine& signal_engine, FilterSwitchPort& filter_switch, StoragePort& storage,

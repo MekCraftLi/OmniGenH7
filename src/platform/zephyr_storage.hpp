@@ -29,6 +29,12 @@
 
 namespace omnigen {
 
+/**
+ * @brief Zephyr 外部 NOR 存储适配类。
+ *
+ * 该类实现 `StoragePort`，将领域层存储请求转发给 W25Q64 支持驱动，并维护当前
+ * 初始化状态供系统状态查询使用。
+ */
 class ZephyrStorage : public StoragePort {
 public:
     ZephyrStorage() = default;

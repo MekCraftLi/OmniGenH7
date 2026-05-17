@@ -92,6 +92,7 @@ Follow Zephyr RTOS coding conventions (Linux kernel style with Zephyr-specific r
 - SPDX license headers required on all new files
 - All C/C++ source and header files must use the project Doxygen file banner style:
   `@file`, `@brief`, `@attention`, `@note`, `@author`, `@date`, `@version`
+- All user-defined data structure declarations (`struct`, `enum`, `enum class`, `union`, `class`) must have detailed Chinese Doxygen comments explaining purpose, ownership/lifetime when relevant, and key fields or enum values.
 - Organize file bodies with numbered section dividers like `/*-------- 1. includes and imports ----*/`, `2. enum and define`, `3. interface` or `3. implementation`
 
 ## Zephyr Submodule

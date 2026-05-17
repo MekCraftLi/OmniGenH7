@@ -25,6 +25,12 @@
 
 namespace omnigen {
 
+/**
+ * @brief MPU 策略检查管理类。
+ *
+ * 该类集中处理与 Cortex-M7 MPU 内存属性相关的启动期检查。实际 MPU 区域由
+ * Zephyr 根据设备树配置完成，本类用于验证关键内存区域策略是否符合预期。
+ */
 class MpuManager {
 public:
     /**

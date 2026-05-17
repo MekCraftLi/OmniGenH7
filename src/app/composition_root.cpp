@@ -47,6 +47,12 @@ namespace omnigen {
 
 /*-------- 2. data structures ----------------------------------------------------------------------------------------*/
 
+/**
+ * @brief 系统实例上下文结构体。
+ *
+ * 该结构集中拥有平台适配器、领域服务和应用总线实例，是组合根中的依赖注入
+ * 容器。成员构造顺序即依赖顺序，避免在其他模块中创建全局单例。
+ */
 struct SystemContext {
     MockWaveSink wave_sink;
     ZephyrStorage storage;

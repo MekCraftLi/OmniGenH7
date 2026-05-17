@@ -32,7 +32,10 @@ namespace omnigen {
 /*-------- 3. interface ----------------------------------------------------------------------------------------------*/
 
 /**
- * @brief Mock implementation of WaveSinkPort.
+ * @brief 波形输出端口的 Mock 实现类。
+ *
+ * 用于无真实 DAC 硬件时验证信号引擎命令流程。该类只记录配置、运行状态和提交
+ * 数据块次数，不产生实际模拟输出。
  */
 class MockWaveSink : public WaveSinkPort {
 public:

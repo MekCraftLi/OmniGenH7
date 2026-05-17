@@ -47,10 +47,10 @@ namespace omnigen {
 /*-------- 3. interface ----------------------------------------------------------------------------------------------*/
 
 /**
- * @brief Signal engine state machine.
+ * @brief 信号引擎业务状态机类。
  *
- * Handles business logic for signal generation.
- * Coordinates with WaveSinkPort for output control.
+ * 该类是信号发生器的核心领域服务，负责处理启动、停止、暂停、恢复和参数修改
+ * 等命令，并通过 `WaveSinkPort` 控制实际输出端口。它不依赖具体硬件实现。
  */
 class SignalEngine {
 public:

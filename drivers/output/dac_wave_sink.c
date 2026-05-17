@@ -43,6 +43,12 @@ LOG_MODULE_REGISTER(dac_wave_sink, CONFIG_LOG_DEFAULT_LEVEL);
 
 /*-------- 2. data structures ----------------------------------------------------------------------------------------*/
 
+/**
+ * @brief DAC 波形输出设备静态配置结构体。
+ *
+ * 保存从设备树和驱动实例化阶段传入的硬件资源参数，包括 DAC、定时器、DMA、
+ * 缓冲区大小和默认采样率。
+ */
 struct dac_wave_sink_config {
     const struct device *dac_dev;
     uint32_t timer_base;
@@ -53,6 +59,12 @@ struct dac_wave_sink_config {
     uint32_t dac_channel;
 };
 
+/**
+ * @brief DAC 波形输出设备运行时数据结构体。
+ *
+ * 保存 HAL 句柄、样本缓冲区、运行状态和当前采样率。该结构由 Zephyr 设备实例
+ * 持有，驱动函数通过 `dev->data` 访问。
+ */
 struct dac_wave_sink_data {
     DAC_HandleTypeDef hdac;
     TIM_HandleTypeDef htim;

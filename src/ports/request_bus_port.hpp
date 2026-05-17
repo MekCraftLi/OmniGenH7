@@ -32,6 +32,12 @@ namespace omnigen {
 
 /*-------- 3. interface ----------------------------------------------------------------------------------------------*/
 
+/**
+ * @brief 应用读请求总线端口抽象类。
+ *
+ * 该接口是 Shell、UI、主机协议等读取入口到状态提供者之间的边界。调用方提交
+ * `AppRequest`，实现类填充 `AppResponse`。
+ */
 class RequestBusPort {
 public:
     virtual ~RequestBusPort() = default;

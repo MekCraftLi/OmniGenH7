@@ -25,6 +25,7 @@
 - Format with `.clang-format` (LLVM-based): 4-space indent, 120-column limit, left pointer alignment, attached braces.
 - Use `snake_case` for files/functions/variables; keep module names aligned within `src/*`.
 - All C/C++ files use the project Doxygen file banner (`@file`, `@brief`, `@attention`, `@note`, `@author`, `@date`, `@version`).
+- All user-defined data structure declarations (`struct`, `enum`, `enum class`, `union`, `class`) must include detailed Chinese Doxygen comments describing purpose, ownership/lifetime when relevant, and key fields or enum values.
 - Organize file bodies with numbered section dividers (`1. includes and imports`, `2. enum and define`, `3. interface`/`implementation`).
 - Keep platform-specific code in `platform/` or `drivers/`; keep domain logic hardware-agnostic.
 

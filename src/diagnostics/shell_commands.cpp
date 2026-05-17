@@ -59,6 +59,12 @@ static constexpr size_t k_nor_shell_line_bytes = 16U;
 static constexpr size_t k_nor_shell_rw_chunk   = 256U;
 static constexpr size_t k_nor_shell_max_read   = 4096U;
 
+/**
+ * @brief 系统资源线程遍历上下文。
+ *
+ * Shell 资源诊断命令在遍历 Zephyr 线程列表时使用该结构保存输出目标、线程计数
+ * 和可选的运行时间统计基准。
+ */
 struct SysResThreadDumpContext {
     const struct shell* sh{nullptr};
     uint32_t thread_count{0U};
@@ -68,6 +74,12 @@ struct SysResThreadDumpContext {
 #endif
 };
 
+/**
+ * @brief 系统资源快照结构体。
+ *
+ * 保存一次 `sysres` 诊断采样得到的运行时间、CPU 负载、堆统计和线程数量等信息。
+ * 条件编译字段只在对应 Zephyr 功能启用时存在。
+ */
 struct SysResSnapshot {
     uint32_t uptime_ms{0U};
 #if defined(CONFIG_CPU_LOAD)

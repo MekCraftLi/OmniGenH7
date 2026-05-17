@@ -33,6 +33,12 @@ namespace omnigen {
 
 /*-------- 3. interface ----------------------------------------------------------------------------------------------*/
 
+/**
+ * @brief 进程内同步命令总线实现类。
+ *
+ * 将 `AppCommand` 按类型直接分发给当前组合根中的服务或平台端口。该实现不排队、
+ * 不缓存命令，适合启动调试、Shell 控制和早期硬件 bring-up。
+ */
 class DirectCommandBus : public CommandBusPort {
 public:
     DirectCommandBus(SignalEngine& signal_engine, FilterSwitchPort& filter_switch);

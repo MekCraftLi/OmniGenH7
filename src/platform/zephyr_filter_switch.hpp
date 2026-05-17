@@ -31,6 +31,12 @@ namespace omnigen {
 
 /*-------- 3. interface ----------------------------------------------------------------------------------------------*/
 
+/**
+ * @brief Zephyr GPIO 滤波器切换适配类。
+ *
+ * 该类实现 `FilterSwitchPort`，负责按安全时序驱动滤波器选择、使能和静音 GPIO。
+ * 调用方只需要选择逻辑滤波档位。
+ */
 class ZephyrFilterSwitch : public FilterSwitchPort {
 public:
     ZephyrFilterSwitch() = default;

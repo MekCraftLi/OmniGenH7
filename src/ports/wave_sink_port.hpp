@@ -35,16 +35,25 @@ namespace omnigen {
 
 /*-------- 2. data structures ----------------------------------------------------------------------------------------*/
 
+/**
+ * @brief 波形样本块描述符。
+ *
+ * 该结构只描述一段待输出样本的地址、长度和采样率，不拥有样本内存。调用方必须
+ * 保证 `samples` 在提交期间有效。
+ */
 struct WaveSampleBlock {
-    const uint16_t* samples;
-    size_t count;
-    uint32_t sample_rate_hz;
+    const uint16_t* samples;  /**< 12 位 DAC 样本数组首地址。 */
+    size_t count;             /**< 样本数量。 */
+    uint32_t sample_rate_hz;  /**< 样本块对应的采样率，单位 Hz。 */
 };
 
 /*-------- 3. interface ----------------------------------------------------------------------------------------------*/
 
 /**
- * @brief Abstract interface for signal output.
+ * @brief 波形输出端口抽象类。
+ *
+ * 该接口隔离信号引擎与具体输出硬件。实现类可以是 DAC+TIM+DMA、外部 DAC 或
+ * 测试用 mock，但必须遵循统一的配置、启动、停止和样本提交语义。
  */
 class WaveSinkPort {
 public:

@@ -38,23 +38,26 @@ namespace omnigen {
 /*-------- 2. enum and define ----------------------------------------------------------------------------------------*/
 
 /**
- * @brief Error codes for OmniGen operations.
+ * @brief OmniGen 通用错误码枚举。
+ *
+ * 所有不使用异常的模块都通过该枚举表达失败原因。枚举值保持紧凑，适合在
+ * 嵌入式日志、Shell 输出和总线响应中传递。
  */
 enum class ErrorCode : uint8_t {
-    Ok = 0,
-    InvalidArgument,
-    InvalidState,
-    Timeout,
-    IoError,
-    Busy,
-    NoMemory,
-    Unsupported,
-    HardwareFault,
-    DataCorrupted,
-    NotFound,
-    BufferError,
-    ConfigError,
-    Unknown,
+    Ok = 0,        /**< 操作成功。 */
+    InvalidArgument, /**< 调用参数无效或超出允许范围。 */
+    InvalidState, /**< 当前状态不允许执行该操作。 */
+    Timeout,      /**< 等待硬件、总线或同步事件超时。 */
+    IoError,      /**< 底层输入输出操作失败。 */
+    Busy,         /**< 目标资源正忙，暂时无法处理请求。 */
+    NoMemory,     /**< 内存、缓冲区或固定资源不足。 */
+    Unsupported,  /**< 当前平台或模块不支持该功能。 */
+    HardwareFault, /**< 硬件外设报告故障或初始化失败。 */
+    DataCorrupted, /**< 数据校验失败或内容损坏。 */
+    NotFound,     /**< 请求的对象、记录或设备不存在。 */
+    BufferError,  /**< 缓冲区大小、对齐或生命周期不满足要求。 */
+    ConfigError,  /**< 配置项、设备树或初始化参数错误。 */
+    Unknown,      /**< 未分类错误，用于保底诊断。 */
 };
 
 /**
@@ -74,10 +77,13 @@ inline constexpr bool is_error(ErrorCode ec) noexcept {
 /*-------- 3. interface ----------------------------------------------------------------------------------------------*/
 
 /**
- * @brief A result type that holds either a value or an error.
+ * @brief 携带返回值或错误码的轻量级结果类型。
  *
- * Simplified implementation without STL dependencies.
- * Suitable for embedded environments with minimal C++ support.
+ * `Result<T>` 用于替代异常机制，调用方必须显式检查 `is_ok()` 或 `is_error()`。
+ * 成功时保存一个 `T` 类型值，失败时保存 `ErrorCode`。该类型不依赖 STL，适合
+ * 资源受限的嵌入式环境。
+ *
+ * @tparam T 成功路径返回的数据类型。
  */
 template <typename T>
 class Result {
@@ -145,7 +151,10 @@ private:
 };
 
 /**
- * @brief Specialization for void results (operations with no return value).
+ * @brief 无返回值操作的结果类型特化。
+ *
+ * 该特化用于只需要表达成功或失败、不需要返回数据的函数，例如硬件初始化、
+ * 命令提交和状态切换。内部仅保存错误码，避免为 `void` 构造无意义的存储。
  */
 template <>
 class Result<void> {
