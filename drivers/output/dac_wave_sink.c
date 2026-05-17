@@ -1,33 +1,25 @@
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2025 MekCraftLi
- * SPDX-License-Identifier: Apache-2.0
- *
+/**
+ *******************************************************************************
  * @file    dac_wave_sink.c
  * @brief   DAC wave output driver using TIM trigger and DMA
+ *******************************************************************************
+ * @attention
+ *
+ * This driver is board-specific and drives DAC1 channel 1 on PA4 using TIM6 and
+ * DMA for continuous waveform output.
+ *
+ *******************************************************************************
+ * @note
+ *
+ * DAC samples are 12-bit right-aligned values. The DMA buffer must remain safe
+ * for peripheral DMA access on STM32H723.
+ *
+ *******************************************************************************
+ * @author  MekLi
+ * @date    2026/05/17
+ * @version 1.0
+ *******************************************************************************
  */
-
-/*
- * ============================================================================
- * DAC Wave Sink Driver
- * ============================================================================
- *
- * This driver implements a continuous waveform output using:
- * - DAC1 Channel 1 (PA4) for analog output
- * - TIM6 for sample rate timing
- * - DMA for automatic sample transfer
- *
- * Operation:
- * 1. Configure TIM6 to trigger at sample rate frequency
- * 2. Configure DMA to transfer samples from buffer to DAC
- * 3. DAC converts samples to analog voltage on each TIM trigger
- * 4. DMA operates in circular mode for continuous output
- *
- * STM32H723 DAC Reference:
- * - DAC output range: 0 to VREF+ (typically 3.3V)
- * - 12-bit resolution: 4096 levels
- * - Output voltage = (DAC_DHR12R / 4095) * VREF+
- */
-
 #define DT_DRV_COMPAT mekcraft_dac_wave_sink
 
 #include <zephyr/kernel.h>
@@ -49,9 +41,7 @@ LOG_MODULE_REGISTER(dac_wave_sink, CONFIG_LOG_DEFAULT_LEVEL);
 
 #if DT_HAS_COMPAT_STATUS_OKAY(mekcraft_dac_wave_sink)
 
-/* ============================================================================
- * Driver Data Structures
- * ============================================================================ */
+/*-------- 2. data structures ----------------------------------------------------------------------------------------*/
 
 struct dac_wave_sink_config {
     const struct device *dac_dev;
@@ -73,18 +63,14 @@ struct dac_wave_sink_data {
     uint32_t sample_rate;
 };
 
-/* ============================================================================
- * DMA Buffer (placed in non-cacheable SRAM for DMA safety)
- * ============================================================================ */
+/*-------- 3. buffers ------------------------------------------------------------------------------------------------*/
 
 #define DEFAULT_BUFFER_SIZE 256
 
 /* Double buffer for continuous output */
 static uint16_t dac_buffer[DEFAULT_BUFFER_SIZE * 2] __aligned(4);
 
-/* ============================================================================
- * Hardware Initialization
- * ============================================================================ */
+/*-------- 4. hardware initialization --------------------------------------------------------------------------------*/
 
 static int init_dac(const struct device *dev)
 {
@@ -177,9 +163,7 @@ static int init_dma(const struct device *dev)
     return 0;
 }
 
-/* ============================================================================
- * Driver API Implementation
- * ============================================================================ */
+/*-------- 5. driver implementation ----------------------------------------------------------------------------------*/
 
 static int dac_wave_sink_init(const struct device *dev)
 {
@@ -214,9 +198,7 @@ static int dac_wave_sink_init(const struct device *dev)
     return 0;
 }
 
-/* ============================================================================
- * Public API (for use by ZephyrWaveSink)
- * ============================================================================ */
+/*-------- 6. public api ---------------------------------------------------------------------------------------------*/
 
 int dac_wave_sink_configure(const struct device *dev, uint32_t sample_rate)
 {
@@ -304,9 +286,7 @@ int dac_wave_sink_set_buffer(const struct device *dev, const uint16_t *samples, 
     return 0;
 }
 
-/* ============================================================================
- * Device Definition
- * ============================================================================ */
+/*-------- 7. device definition --------------------------------------------------------------------------------------*/
 
 #define DAC_WAVE_SINK_INIT(n) \
     static struct dac_wave_sink_data dac_wave_sink_data_##n; \

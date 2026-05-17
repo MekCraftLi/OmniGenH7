@@ -234,7 +234,7 @@ output_mute = PB10
 2. 新增平台模块：
 
 ```text
-inc/platform/analog_filter_switch.hpp
+src/platform/analog_filter_switch.hpp
 src/platform/analog_filter_switch.cpp
 ```
 

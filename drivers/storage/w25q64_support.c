@@ -1,10 +1,26 @@
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2026 MekCraftLi
- * SPDX-License-Identifier: Apache-2.0
- *
+/**
+ *******************************************************************************
  * @file    w25q64_support.c
  * @brief   W25Q64 support layer using Zephyr flash device API
+ *******************************************************************************
+ * @attention
+ *
+ * This file wraps the board OCTOSPI NOR flash node for diagnostics and platform
+ * storage adapters.
+ *
+ *******************************************************************************
+ * @note
+ *
+ * Writes are split at page boundaries; erases are delegated to the Zephyr flash
+ * driver and must follow device erase alignment requirements.
+ *
+ *******************************************************************************
+ * @author  MekLi
+ * @date    2026/05/17
+ * @version 1.0
+ *******************************************************************************
  */
+/*-------- 1. includes and imports -----------------------------------------------------------------------------------*/
 
 #include "drivers/w25q64_support.h"
 
@@ -15,6 +31,8 @@
 #include <zephyr/device.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/logging/log.h>
+
+/*-------- 2. enum and define ----------------------------------------------------------------------------------------*/
 
 #define W25Q64_SECTOR_SIZE 4096U
 #define W25Q64_PAGE_SIZE   256U
@@ -29,6 +47,8 @@ LOG_MODULE_REGISTER(w25q64_support, CONFIG_LOG_DEFAULT_LEVEL);
 
 static const struct device* g_w25q64_dev;
 
+/*-------- 3. internal helpers ---------------------------------------------------------------------------------------*/
+
 static bool is_address_in_range(uint32_t address, size_t len, uint32_t flash_size)
 {
     uint64_t end = (uint64_t)address + (uint64_t)len;
@@ -41,6 +61,8 @@ static size_t page_chunk_len(uint32_t address, size_t remain)
     size_t page_left = W25Q64_PAGE_SIZE - page_off;
     return (remain < page_left) ? remain : page_left;
 }
+
+/*-------- 4. public api ---------------------------------------------------------------------------------------------*/
 
 int w25q64_support_init(void)
 {

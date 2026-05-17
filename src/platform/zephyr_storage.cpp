@@ -1,9 +1,25 @@
 /**
  *******************************************************************************
  * @file    zephyr_storage.cpp
- * @brief   Zephyr implementation of StoragePort using W25Q64
+ * @brief   Zephyr storage adapter implementation for W25Q64
+ *******************************************************************************
+ * @attention
+ *
+ * This file forwards StoragePort operations to the board-level W25Q64 support
+ * driver.
+ *
+ *******************************************************************************
+ * @note
+ *
+ * Address ranges are validated by the lower-level storage support driver.
+ *
+ *******************************************************************************
+ * @author  MekLi
+ * @date    2026/05/17
+ * @version 1.0
  *******************************************************************************
  */
+/*-------- 1. includes and imports -----------------------------------------------------------------------------------*/
 
 #include "platform/zephyr_storage.hpp"
 
@@ -12,6 +28,8 @@
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(zephyr_storage, CONFIG_LOG_DEFAULT_LEVEL);
+
+/*-------- 3. implementation -----------------------------------------------------------------------------------------*/
 
 namespace omnigen {
 
@@ -53,17 +71,18 @@ Result<void> ZephyrStorage::mount()
     }
 #endif
 
+    mounted_ = true;
     return ErrorCode::Ok;
 }
 
-Result<void> ZephyrStorage::read(uint32_t address, void* data, size_t len)
+Result<void> ZephyrStorage::read(const StorageReadRequest& request)
 {
-    return map_errno_to_result(w25q64_support_read(address, data, len));
+    return map_errno_to_result(w25q64_support_read(request.address, request.buffer, request.length));
 }
 
-Result<void> ZephyrStorage::write(uint32_t address, const void* data, size_t len)
+Result<void> ZephyrStorage::write(const StorageWriteRequest& request)
 {
-    return map_errno_to_result(w25q64_support_write(address, data, len));
+    return map_errno_to_result(w25q64_support_write(request.address, request.data, request.length));
 }
 
 Result<void> ZephyrStorage::erase_sector(uint32_t address)
@@ -71,9 +90,9 @@ Result<void> ZephyrStorage::erase_sector(uint32_t address)
     return map_errno_to_result(w25q64_support_erase_sector(address));
 }
 
-Result<void> ZephyrStorage::erase_range(uint32_t address, size_t len)
+Result<void> ZephyrStorage::erase_range(const StorageEraseRangeRequest& request)
 {
-    return map_errno_to_result(w25q64_support_erase_range(address, len));
+    return map_errno_to_result(w25q64_support_erase_range(request.address, request.length));
 }
 
 } // namespace omnigen

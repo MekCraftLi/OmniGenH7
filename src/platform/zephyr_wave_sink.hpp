@@ -23,7 +23,7 @@
 
 #pragma once
 
-/* ------- include ---------------------------------------------------------------------------------------------------*/
+/*-------- 1. includes and imports -----------------------------------------------------------------------------------*/
 
 #include "ports/wave_sink_port.hpp"
 #include "domain/waveform_synthesis.hpp"
@@ -32,7 +32,7 @@
 
 namespace omnigen {
 
-/* ------- class prototypes ------------------------------------------------------------------------------------------*/
+/*-------- 3. interface ----------------------------------------------------------------------------------------------*/
 
 /**
  * @brief Zephyr implementation of WaveSinkPort.
@@ -47,7 +47,7 @@ public:
     Result<void> configure(const SignalProfile& profile) override;
     Result<void> start() override;
     Result<void> stop() override;
-    Result<void> submit_block(const uint16_t* samples, size_t count) override;
+    Result<void> submit_block(const WaveSampleBlock& block) override;
 
     /**
      * @brief Check if output is currently running.

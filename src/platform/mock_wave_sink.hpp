@@ -23,13 +23,13 @@
 
 #pragma once
 
-/* ------- include ---------------------------------------------------------------------------------------------------*/
+/*-------- 1. includes and imports -----------------------------------------------------------------------------------*/
 
 #include "ports/wave_sink_port.hpp"
 
 namespace omnigen {
 
-/* ------- class prototypes ------------------------------------------------------------------------------------------*/
+/*-------- 3. interface ----------------------------------------------------------------------------------------------*/
 
 /**
  * @brief Mock implementation of WaveSinkPort.
@@ -41,7 +41,7 @@ public:
     Result<void> configure(const SignalProfile& profile) override;
     Result<void> start() override;
     Result<void> stop() override;
-    Result<void> submit_block(const uint16_t* samples, size_t count) override;
+    Result<void> submit_block(const WaveSampleBlock& block) override;
 
     /* Test helpers */
     bool is_running() const { return running_; }

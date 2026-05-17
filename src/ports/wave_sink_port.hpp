@@ -23,7 +23,7 @@
 
 #pragma once
 
-/* ------- include ---------------------------------------------------------------------------------------------------*/
+/*-------- 1. includes and imports -----------------------------------------------------------------------------------*/
 
 #include "base/result.hpp"
 #include "domain/signal_profile.hpp"
@@ -33,7 +33,15 @@
 
 namespace omnigen {
 
-/* ------- class prototypes ------------------------------------------------------------------------------------------*/
+/*-------- 2. data structures ----------------------------------------------------------------------------------------*/
+
+struct WaveSampleBlock {
+    const uint16_t* samples;
+    size_t count;
+    uint32_t sample_rate_hz;
+};
+
+/*-------- 3. interface ----------------------------------------------------------------------------------------------*/
 
 /**
  * @brief Abstract interface for signal output.
@@ -59,10 +67,9 @@ public:
 
     /**
      * @brief Submit samples for DMA output.
-     * @param samples Pointer to sample array.
-     * @param count Number of samples.
+     * @param block Sample block descriptor.
      */
-    virtual Result<void> submit_block(const uint16_t* samples, size_t count) = 0;
+    virtual Result<void> submit_block(const WaveSampleBlock& block) = 0;
 };
 
 } // namespace omnigen

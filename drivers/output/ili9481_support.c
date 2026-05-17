@@ -1,10 +1,26 @@
-/*
- * SPDX-FileCopyrightText: Copyright (c) 2026 MekCraftLi
- * SPDX-License-Identifier: Apache-2.0
- *
+/**
+ *******************************************************************************
  * @file    ili9481_support.c
  * @brief   ILI9481 support layer using FMC memory-mapped 8080 bus
+ *******************************************************************************
+ * @attention
+ *
+ * This file directly accesses the FMC memory window configured by board
+ * devicetree and therefore belongs to the board support layer.
+ *
+ *******************************************************************************
+ * @note
+ *
+ * Command and data writes are separated by the configured FMC A16 register
+ * select line.
+ *
+ *******************************************************************************
+ * @author  MekLi
+ * @date    2026/05/17
+ * @version 1.0
+ *******************************************************************************
  */
+/*-------- 1. includes and imports -----------------------------------------------------------------------------------*/
 
 #include "drivers/ili9481_support.h"
 
@@ -15,6 +31,8 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+
+/*-------- 2. enum and define ----------------------------------------------------------------------------------------*/
 
 LOG_MODULE_REGISTER(ili9481_support, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -55,6 +73,8 @@ static const struct gpio_dt_spec g_reset_gpio =
     GPIO_DT_SPEC_GET_OR(ILI9481_NODE, reset_gpios, {0});
 
 static bool g_ready;
+
+/*-------- 3. internal helpers ---------------------------------------------------------------------------------------*/
 
 static inline void ili9481_write_cmd(uint16_t cmd)
 {
@@ -123,6 +143,8 @@ static int ili9481_reset_panel(void)
 
     return 0;
 }
+
+/*-------- 4. public api ---------------------------------------------------------------------------------------------*/
 
 int ili9481_support_init(void)
 {

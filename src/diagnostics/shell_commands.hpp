@@ -27,19 +27,20 @@
 
 #pragma once
 
-/* ------- include ---------------------------------------------------------------------------------------------------*/
+/*-------- 1. includes and imports -----------------------------------------------------------------------------------*/
 
-#include "services/signal_engine.hpp"
+#include "ports/command_bus_port.hpp"
+#include "ports/request_bus_port.hpp"
 
 namespace omnigen {
 
-/* ------- function declare ------------------------------------------------------------------------------------------*/
+/*-------- 3. interface ----------------------------------------------------------------------------------------------*/
 
 /**
  * @brief Register shell commands for signal engine.
  *
  * Call once during initialization.
  */
-void register_signal_shell_commands(SignalEngine& engine);
+void register_signal_shell_commands(CommandBusPort& command_bus, RequestBusPort& request_bus);
 
 } // namespace omnigen

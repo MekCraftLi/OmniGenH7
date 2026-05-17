@@ -9,11 +9,20 @@ OmniGen H7 is a Zephyr RTOS board definition project for a custom STM32H723ZG-ba
 ## Build Commands
 
 ```bash
+# Build commands must run inside the conda zephyr environment.
+# In non-interactive PowerShell, prefer `conda run -n zephyr ...` because `conda activate`
+# may require shell initialization.
+conda activate zephyr
+
 # Build the project
 west build -b omnigen_h7 . -- -DBOARD_ROOT=.
+# Non-interactive PowerShell equivalent:
+conda run -n zephyr west build -b omnigen_h7 . -- -DBOARD_ROOT=C:/env/zephyrproject/OmniGenH7
 
 # Clean build
 west build -b omnigen_h7 . -p always -- -DBOARD_ROOT=.
+# Non-interactive PowerShell equivalent:
+conda run -n zephyr west build -b omnigen_h7 . -p always -- -DBOARD_ROOT=C:/env/zephyrproject/OmniGenH7
 
 # Flash the board (choose one)
 west flash --runner stm32cubeprogrammer  # STM32CubeProgrammer via SWD
@@ -34,9 +43,41 @@ minicom -D /dev/ttyUSB0 -b 115200
 
 ## Architecture
 
-The application uses STM32 Low-Level (LL) drivers directly for DMA and UART idle interrupt handling, bypassing Zephyr's async UART API. This is necessary because the Zephyr STM32 UART driver does not expose the idle line detection feature.
+The application follows Clean Architecture / Ports & Adapters pattern with a unified data bus design.
 
-Key implementation details:
+### Ports & Adapters
+
+- `src/ports/` — Abstract interfaces (ports) for hardware capabilities
+  - `WaveSinkPort`, `StoragePort`, `DisplayPort`, `FilterSwitchPort`
+  - `CommandBusPort` — write-side command dispatch
+  - `RequestBusPort` — read-side query dispatch
+- `src/platform/` — Concrete Zephyr adapters implementing the ports
+- `src/services/` — Domain services (`SignalEngine`, `DirectCommandBus`, `DirectRequestBus`)
+- `src/domain/` — Pure domain types and algorithms
+- `src/app/composition_root.cpp` — `SystemContext` owns all instances, wires dependencies
+- `drivers/` — C-level hardware driver support (DAC, ILI9481, W25Q64)
+
+### Data Bus & Naming Convention
+
+All data exchanged across module boundaries follows a strict taxonomy:
+
+| Category | Meaning | Examples |
+|----------|---------|----------|
+| **Command** | Write intent (do something) | `SignalCommand`, `FilterCommand`, `AppCommand` |
+| **Request** | Read/query intent | `AppRequest`, `StorageReadRequest`, `DisplayBlitRequest` |
+| **Response** | Read/query result envelope | `AppResponse` |
+| **Status** | Current module state (small) | `FilterStatus`, `StorageStatus`, `DisplayStatus`, `SystemStatus` |
+| **Snapshot** | Detailed service state copy (large) | `SignalEngineSnapshot` |
+| **Payload/Block** | Bulk data descriptor (pass by ref) | `WaveSampleBlock` |
+
+Flow:
+- **Write path**: Shell/UI → `AppCommand` → `CommandBusPort::submit()` → `DirectCommandBus` → service
+- **Read path**: Shell/UI → `AppRequest` → `RequestBusPort::request()` → `DirectRequestBus` → `AppResponse`
+- Status structs are simple aggregates (no defaults) to support designated initializers.
+- `AppCommand` carries metadata: `source` (who sent it) and `sequence` (monotonic ID).
+
+### Key Implementation Details
+
 - **DMA RX**: Uses LL DMA in normal mode with idle line interrupt to detect packet boundaries
 - **DMA TX**: Configured per-transfer, waits for TC (transfer complete) flag
 - **ISR**: `uart_isr_handler` clears IDLE flag and calculates received length from DMA CNDTR
@@ -49,6 +90,9 @@ Follow Zephyr RTOS coding conventions (Linux kernel style with Zephyr-specific r
 - Braces required on all control statements, even single-line blocks
 - Use `/* */` comments (not `//`)
 - SPDX license headers required on all new files
+- All C/C++ source and header files must use the project Doxygen file banner style:
+  `@file`, `@brief`, `@attention`, `@note`, `@author`, `@date`, `@version`
+- Organize file bodies with numbered section dividers like `/*-------- 1. includes and imports ----*/`, `2. enum and define`, `3. interface` or `3. implementation`
 
 ## Zephyr Submodule
 
@@ -70,5 +114,5 @@ To run simulation (PowerShell):
 
 Firmware waveform algorithm locations for cross-reference:
 - `src/domain/waveform_synthesis.cpp` — Sine/Sq/Tri/Saw generation (LUT-based)
-- `inc/domain/waveform_synthesis.hpp` — Public API
-- `inc/domain/signal_profile.hpp` — Profile structs (WaveformKind, SignalLimits)
+- `src/domain/waveform_synthesis.hpp` — Public API
+- `src/domain/signal_profile.hpp` — Profile structs (WaveformKind, SignalLimits)

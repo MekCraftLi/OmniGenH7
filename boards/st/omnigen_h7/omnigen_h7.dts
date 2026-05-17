@@ -195,6 +195,7 @@
 #include <st/h7/stm32h723Xg.dtsi>           /* STM32H723ZG SoC 定义 */
 #include <st/h7/stm32h723zgtx-pinctrl.dtsi> /* 引脚复用定义 */
 #include <zephyr/dt-bindings/dma/stm32_dma.h>  /* DMA 宏定义 */
+#include <zephyr/dt-bindings/gpio/gpio.h>
 #include <zephyr/dt-bindings/memory-attr/memory-attr-arm.h>
 #include <zephyr/dt-bindings/memory-controller/stm32-fmc-nor-psram.h>
 
@@ -257,6 +258,118 @@
             gpios = <&gpiog 7 GPIO_ACTIVE_HIGH>;  /* PG7, 高电平点亮 */
             label = "User LED";
         };
+
+        status_led: led_status {
+            gpios = <&gpioc 8 GPIO_ACTIVE_HIGH>;
+            label = "Status LED";
+        };
+
+        fault_led: led_fault {
+            gpios = <&gpioc 9 GPIO_ACTIVE_HIGH>;
+            label = "Fault LED";
+        };
+    };
+
+    gpio_keys {
+        compatible = "gpio-keys";
+
+        enc_main_a: enc_main_a {
+            gpios = <&gpiob 3 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            label = "Main Encoder A";
+        };
+
+        enc_main_b: enc_main_b {
+            gpios = <&gpiob 4 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            label = "Main Encoder B";
+        };
+
+        enc_main_sw: enc_main_sw {
+            gpios = <&gpiob 5 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            label = "Main Encoder Switch";
+        };
+
+        enc_fine_a: enc_fine_a {
+            gpios = <&gpiob 6 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            label = "Fine Encoder A";
+        };
+
+        enc_fine_b: enc_fine_b {
+            gpios = <&gpiob 7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            label = "Fine Encoder B";
+        };
+
+        enc_fine_sw: enc_fine_sw {
+            gpios = <&gpiob 8 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            label = "Fine Encoder Switch";
+        };
+
+        btn_run: btn_run {
+            gpios = <&gpiob 9 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            label = "Run Button";
+        };
+
+        btn_wave: btn_wave {
+            gpios = <&gpiob 11 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            label = "Wave Button";
+        };
+
+        btn_filter: btn_filter {
+            gpios = <&gpiob 12 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            label = "Filter Button";
+        };
+
+        btn_back: btn_back {
+            gpios = <&gpiob 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            label = "Back Button";
+        };
+
+        btn_store: btn_store {
+            gpios = <&gpioc 0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            label = "Store Button";
+        };
+
+        btn_menu: btn_menu {
+            gpios = <&gpioc 1 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            label = "Menu Button";
+        };
+    };
+
+    filter_switch: filter_switch {
+        compatible = "gpio-leds";
+
+        filter_sel0: filter_sel0 {
+            gpios = <&gpiob 0 GPIO_ACTIVE_HIGH>;
+            label = "Filter Select 0";
+        };
+
+        filter_sel1: filter_sel1 {
+            gpios = <&gpiob 1 GPIO_ACTIVE_HIGH>;
+            label = "Filter Select 1";
+        };
+
+        filter_en: filter_en {
+            gpios = <&gpiob 2 GPIO_ACTIVE_HIGH>;
+            label = "Filter Enable";
+        };
+
+        output_mute: output_mute {
+            gpios = <&gpiob 10 GPIO_ACTIVE_HIGH>;
+            label = "Output Mute";
+        };
+    };
+
+    auxiliary_outputs {
+        compatible = "gpio-leds";
+
+        ws2812_data: ws2812_data {
+            gpios = <&gpioc 6 GPIO_ACTIVE_HIGH>;
+            label = "WS2812 Data";
+        };
+
+        buzzer: buzzer {
+            gpios = <&gpiob 15 GPIO_ACTIVE_HIGH>;
+            label = "Buzzer";
+        };
     };
 
     /*
@@ -265,6 +378,26 @@
      */
     aliases {
         led0 = &user_led;  /* led0 别名指向 user_led */
+        led1 = &status_led;
+        led2 = &fault_led;
+        sw0 = &btn_run;
+        sw1 = &btn_wave;
+        sw2 = &btn_filter;
+        sw3 = &btn_back;
+        sw4 = &btn_store;
+        sw5 = &btn_menu;
+        enc-main-a = &enc_main_a;
+        enc-main-b = &enc_main_b;
+        enc-main-sw = &enc_main_sw;
+        enc-fine-a = &enc_fine_a;
+        enc-fine-b = &enc_fine_b;
+        enc-fine-sw = &enc_fine_sw;
+        filter-sel0 = &filter_sel0;
+        filter-sel1 = &filter_sel1;
+        filter-en = &filter_en;
+        output-mute = &output_mute;
+        ws2812-data = &ws2812_data;
+        buzzer = &buzzer;
     };
 };
 

@@ -21,7 +21,7 @@
  *******************************************************************************
  */
 
-/* ------- include ---------------------------------------------------------------------------------------------------*/
+/*-------- 1. includes and imports -----------------------------------------------------------------------------------*/
 
 #include "platform/zephyr_wave_sink.hpp"
 
@@ -31,7 +31,7 @@ LOG_MODULE_REGISTER(zephyr_wave_sink, CONFIG_LOG_DEFAULT_LEVEL);
 
 namespace omnigen {
 
-/* ------- function implement ----------------------------------------------------------------------------------------*/
+/*-------- 3. implementation -----------------------------------------------------------------------------------------*/
 
 ZephyrWaveSink::ZephyrWaveSink()
     : running_(false)
@@ -97,17 +97,16 @@ Result<void> ZephyrWaveSink::stop()
     return ErrorCode::Ok;
 }
 
-Result<void> ZephyrWaveSink::submit_block(const uint16_t* samples, size_t count)
+Result<void> ZephyrWaveSink::submit_block(const WaveSampleBlock& block)
 {
     if (!running_) {
         return ErrorCode::InvalidState;
     }
 
     /* TODO: Submit samples to DAC DMA buffer */
-    /* dac_wave_sink_set_buffer(dac_dev, samples, count); */
+    /* dac_wave_sink_set_buffer(dac_dev, block.samples, block.count); */
 
-    (void)samples;
-    (void)count;
+    (void)block;
 
     return ErrorCode::Ok;
 }

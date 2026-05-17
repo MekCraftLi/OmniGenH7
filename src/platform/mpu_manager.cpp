@@ -1,9 +1,26 @@
 /**
  *******************************************************************************
  * @file    mpu_manager.cpp
- * @brief   MPU policy manager for board-specific memory attributes
+ * @brief   MPU policy manager implementation for board-specific memory attributes
+ *******************************************************************************
+ * @attention
+ *
+ * This file checks the generated Zephyr memory attribute table against board
+ * assumptions for the FMC LCD memory window.
+ *
+ *******************************************************************************
+ * @note
+ *
+ * The actual MPU programming is owned by Zephyr; this module only validates the
+ * configured policy and reports mismatches during startup.
+ *
+ *******************************************************************************
+ * @author  MekLi
+ * @date    2026/05/17
+ * @version 1.0
  *******************************************************************************
  */
+/*-------- 1. includes and imports -----------------------------------------------------------------------------------*/
 
 #include "platform/mpu_manager.hpp"
 
@@ -12,6 +29,8 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/mem_mgmt/mem_attr.h>
 #include <zephyr/sys/util.h>
+
+/*-------- 2. enum and define ----------------------------------------------------------------------------------------*/
 
 LOG_MODULE_REGISTER(mpu_manager, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -27,6 +46,8 @@ static_assert(DT_REG_ADDR(FMC_LCD_NODE) == 0x60000000,
     "fmc_lcd_bank1 base must be 0x60000000");
 static_assert(DT_REG_SIZE(FMC_LCD_NODE) == 0x10000000UL,
     "fmc_lcd_bank1 size must be 256MB");
+
+/*-------- 3. implementation -----------------------------------------------------------------------------------------*/
 
 void MpuManager::init()
 {

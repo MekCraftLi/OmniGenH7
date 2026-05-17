@@ -26,7 +26,7 @@
  *******************************************************************************
  */
 
-/* ------- include ---------------------------------------------------------------------------------------------------*/
+/*-------- 1. includes and imports -----------------------------------------------------------------------------------*/
 
 #include "diagnostics/shell_commands.hpp"
 #include "drivers/ili9481_support.h"
@@ -51,9 +51,10 @@ LOG_MODULE_REGISTER(signal_shell, CONFIG_LOG_DEFAULT_LEVEL);
 
 namespace omnigen {
 
-/* ------- variables -------------------------------------------------------------------------------------------------*/
+/*-------- 2. variables ----------------------------------------------------------------------------------------------*/
 
-static SignalEngine* g_signal_engine = nullptr;
+static CommandBusPort* g_command_bus = nullptr;
+static RequestBusPort* g_request_bus = nullptr;
 static constexpr size_t k_nor_shell_line_bytes = 16U;
 static constexpr size_t k_nor_shell_rw_chunk   = 256U;
 static constexpr size_t k_nor_shell_max_read   = 4096U;
@@ -92,7 +93,16 @@ static uint32_t g_sysres_peak_sched_pm = 0U;
 #endif
 static uint32_t g_sysres_peak_thread_count = 0U;
 
-/* ------- helpers ---------------------------------------------------------------------------------------------------*/
+/*-------- 3. internal helpers ---------------------------------------------------------------------------------------*/
+
+static Result<void> submit_signal_command(const SignalCommand& command)
+{
+    if (g_command_bus == nullptr) {
+        return ErrorCode::InvalidState;
+    }
+
+    return g_command_bus->submit(AppCommand::make_signal(command));
+}
 
 static const char* state_to_string(SignalEngineState state) {
     switch (state) {
@@ -449,19 +459,19 @@ static void print_sysres_snapshot(const struct shell* sh, bool include_thread_ta
 #endif
 }
 
-/* ------- command handlers ------------------------------------------------------------------------------------------*/
+/*-------- 4. command handlers ---------------------------------------------------------------------------------------*/
 
 static int cmd_signal_start(const struct shell* sh, size_t argc, char** argv) {
     (void)argc;
     (void)argv;
 
-    if (!g_signal_engine) {
-        shell_error(sh, "Signal engine not initialized");
+    if (g_command_bus == nullptr) {
+        shell_error(sh, "Command bus not initialized");
         return -1;
     }
 
     auto cmd    = SignalCommand::make_start(CommandSource::Shell);
-    auto result = g_signal_engine->handle_command(cmd);
+    auto result = submit_signal_command(cmd);
 
     if (result.is_ok()) {
         shell_print(sh, "Signal started");
@@ -476,13 +486,13 @@ static int cmd_signal_stop(const struct shell* sh, size_t argc, char** argv) {
     (void)argc;
     (void)argv;
 
-    if (!g_signal_engine) {
-        shell_error(sh, "Signal engine not initialized");
+    if (g_command_bus == nullptr) {
+        shell_error(sh, "Command bus not initialized");
         return -1;
     }
 
     auto cmd    = SignalCommand::make_stop(CommandSource::Shell);
-    auto result = g_signal_engine->handle_command(cmd);
+    auto result = submit_signal_command(cmd);
 
     if (result.is_ok()) {
         shell_print(sh, "Signal stopped");
@@ -497,13 +507,13 @@ static int cmd_signal_pause(const struct shell* sh, size_t argc, char** argv) {
     (void)argc;
     (void)argv;
 
-    if (!g_signal_engine) {
-        shell_error(sh, "Signal engine not initialized");
+    if (g_command_bus == nullptr) {
+        shell_error(sh, "Command bus not initialized");
         return -1;
     }
 
     auto cmd    = SignalCommand::make_pause(CommandSource::Shell);
-    auto result = g_signal_engine->handle_command(cmd);
+    auto result = submit_signal_command(cmd);
 
     if (result.is_ok()) {
         shell_print(sh, "Signal paused");
@@ -518,13 +528,13 @@ static int cmd_signal_resume(const struct shell* sh, size_t argc, char** argv) {
     (void)argc;
     (void)argv;
 
-    if (!g_signal_engine) {
-        shell_error(sh, "Signal engine not initialized");
+    if (g_command_bus == nullptr) {
+        shell_error(sh, "Command bus not initialized");
         return -1;
     }
 
     auto cmd    = SignalCommand::make_resume(CommandSource::Shell);
-    auto result = g_signal_engine->handle_command(cmd);
+    auto result = submit_signal_command(cmd);
 
     if (result.is_ok()) {
         shell_print(sh, "Signal resumed");
@@ -541,8 +551,8 @@ static int cmd_signal_freq(const struct shell* sh, size_t argc, char** argv) {
         return -1;
     }
 
-    if (!g_signal_engine) {
-        shell_error(sh, "Signal engine not initialized");
+    if (g_command_bus == nullptr) {
+        shell_error(sh, "Command bus not initialized");
         return -1;
     }
 
@@ -555,7 +565,7 @@ static int cmd_signal_freq(const struct shell* sh, size_t argc, char** argv) {
     }
 
     auto cmd    = SignalCommand::make_set_frequency(CommandSource::Shell, FrequencyHz{static_cast<uint32_t>(freq)});
-    auto result = g_signal_engine->handle_command(cmd);
+    auto result = submit_signal_command(cmd);
 
     if (result.is_ok()) {
         shell_print(sh, "Frequency set to %u Hz", static_cast<uint32_t>(freq));
@@ -572,14 +582,14 @@ static int cmd_signal_amp(const struct shell* sh, size_t argc, char** argv) {
         return -1;
     }
 
-    if (!g_signal_engine) {
-        shell_error(sh, "Signal engine not initialized");
+    if (g_command_bus == nullptr) {
+        shell_error(sh, "Command bus not initialized");
         return -1;
     }
 
     int32_t amp = atoi(argv[1]);
     auto cmd    = SignalCommand::make_set_amplitude(CommandSource::Shell, VoltageMv{amp});
-    auto result = g_signal_engine->handle_command(cmd);
+    auto result = submit_signal_command(cmd);
 
     if (result.is_ok()) {
         shell_print(sh, "Amplitude set to %d mV", amp);
@@ -594,12 +604,20 @@ static int cmd_signal_status(const struct shell* sh, size_t argc, char** argv) {
     (void)argc;
     (void)argv;
 
-    if (!g_signal_engine) {
-        shell_error(sh, "Signal engine not initialized");
+    if (g_request_bus == nullptr) {
+        shell_error(sh, "Request bus not initialized");
         return -1;
     }
 
-    auto snapshot        = g_signal_engine->snapshot();
+    AppResponse response{};
+    auto request = AppRequest::make(AppRequestKind::SignalSnapshot);
+    auto result = g_request_bus->request(request, response);
+    if (result.is_error()) {
+        shell_error(sh, "Failed to query signal status: error %d", static_cast<int>(result.error()));
+        return -1;
+    }
+
+    auto snapshot        = response.signal;
     const char* state_str = state_to_string(snapshot.state);
     const char* waveform_str = waveform_to_string(snapshot.active_profile.kind);
 
@@ -1186,7 +1204,7 @@ static int cmd_nor_test(const struct shell* sh, size_t argc, char** argv) {
     return 0;
 }
 
-/* ------- shell command definitions ----------------------------------------------------------------------------------*/
+/*-------- 5. shell command definitions ------------------------------------------------------------------------------*/
 
 SHELL_STATIC_SUBCMD_SET_CREATE(
     sub_signal, SHELL_CMD(start, NULL, "Start signal output", cmd_signal_start),
@@ -1227,10 +1245,11 @@ SHELL_CMD_REGISTER(nor, &sub_nor, "NOR flash commands", NULL);
 SHELL_CMD_REGISTER(sysres, NULL,
                    "Show resource usage: sysres | sysres reset | sysres watch <period_ms> [count]", cmd_sysres);
 
-/* ------- public functions ------------------------------------------------------------------------------------------*/
+/*-------- 6. public functions ---------------------------------------------------------------------------------------*/
 
-void register_signal_shell_commands(SignalEngine& engine) {
-    g_signal_engine = &engine;
+void register_signal_shell_commands(CommandBusPort& command_bus, RequestBusPort& request_bus) {
+    g_command_bus = &command_bus;
+    g_request_bus = &request_bus;
     LOG_INF("Signal shell commands registered");
 }
 

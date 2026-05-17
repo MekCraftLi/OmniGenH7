@@ -21,13 +21,13 @@
  *******************************************************************************
  */
 
-/* ------- include ---------------------------------------------------------------------------------------------------*/
+/*-------- 1. includes and imports -----------------------------------------------------------------------------------*/
 
 #include "platform/mock_wave_sink.hpp"
 
 namespace omnigen {
 
-/* ------- function implement ----------------------------------------------------------------------------------------*/
+/*-------- 3. implementation -----------------------------------------------------------------------------------------*/
 
 Result<void> MockWaveSink::configure(const SignalProfile& profile)
 {
@@ -51,10 +51,9 @@ Result<void> MockWaveSink::stop()
     return ErrorCode::Ok;
 }
 
-Result<void> MockWaveSink::submit_block(const uint16_t* samples, size_t count)
+Result<void> MockWaveSink::submit_block(const WaveSampleBlock& block)
 {
-    (void)samples;
-    (void)count;
+    (void)block;
     blocks_submitted_++;
     return ErrorCode::Ok;
 }

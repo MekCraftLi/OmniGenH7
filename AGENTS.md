@@ -7,7 +7,7 @@
   - `src/services/`: orchestration (`SignalEngine`).
   - `src/platform/`: Zephyr and mock port adapters.
   - `src/diagnostics/`: Zephyr shell diagnostics/CLI commands.
-- `inc/` mirrors the module boundaries for public headers.
+- Headers live next to their implementation modules under `src/`; C driver headers live under `drivers/include/`.
 - `drivers/` holds board-level C drivers (DAC output, W25Q64 storage).
 - `boards/st/omnigen_h7/` contains DTS/Kconfig/board config.
 - `dts/bindings/` stores custom Devicetree bindings.
@@ -23,7 +23,9 @@
 ## Coding Style & Naming Conventions
 - Language mix is C++ (core app) + C (low-level drivers).
 - Format with `.clang-format` (LLVM-based): 4-space indent, 120-column limit, left pointer alignment, attached braces.
-- Use `snake_case` for files/functions/variables; keep module names aligned between `src/*` and `inc/*`.
+- Use `snake_case` for files/functions/variables; keep module names aligned within `src/*`.
+- All C/C++ files use the project Doxygen file banner (`@file`, `@brief`, `@attention`, `@note`, `@author`, `@date`, `@version`).
+- Organize file bodies with numbered section dividers (`1. includes and imports`, `2. enum and define`, `3. interface`/`implementation`).
 - Keep platform-specific code in `platform/` or `drivers/`; keep domain logic hardware-agnostic.
 
 ## Testing Guidelines
