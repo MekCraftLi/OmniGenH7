@@ -235,8 +235,8 @@
         memory-region = <&fmc_lcd_bank1>;
         register-select-pin = <16>;
         reset-gpios = <&gpioa 8 GPIO_ACTIVE_LOW>;
-        width = <320>;
-        height = <480>;
+        width = <480>;
+        height = <320>;
         status = "okay";
     };
 
@@ -579,11 +579,10 @@
                           STM32_FMC_WRITE_FIFO_ENABLE
                           STM32_FMC_PAGE_SIZE_NONE>;
             /*
-             * Slower async timing for easier logic-analyzer capture (200 MS/s):
-             * - wider NWE low pulse (DATAST)
-             * - lower effective write strobe frequency
+             * Conservative ILI9481 8080 timing: about 5 MHz WR strobe with
+             * margin for both WR high and low pulse width requirements.
              */
-            st,timing = <2 1 50 0 2 2 STM32_FMC_ACCESS_MODE_A>;
+            st,timing = <15 1 38 0 2 2 STM32_FMC_ACCESS_MODE_A>;
         };
     };
 };
