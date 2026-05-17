@@ -216,6 +216,7 @@
         zephyr,console = &usart1;      /* 控制台输出设备 */
         zephyr,shell-uart = &usart1;   /* Shell 交互设备 */
         zephyr,sram = &sram0;          /* 主 SRAM 区域 */
+        zephyr,dtcm = &dtcm;           /* CPU-only DTCM for non-DMA stacks */
         zephyr,flash = &flash0;        /* 主 Flash 区域 */
     };
 

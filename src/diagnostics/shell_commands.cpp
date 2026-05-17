@@ -31,6 +31,7 @@
 #include "diagnostics/shell_commands.hpp"
 #include "drivers/ili9481_support.h"
 #include "drivers/w25q64_support.h"
+#include "platform/lvgl_port.hpp"
 
 #include <errno.h>
 #include <limits.h>
@@ -856,6 +857,33 @@ static int cmd_lcd_test(const struct shell* sh, size_t argc, char** argv) {
     return 0;
 }
 
+static int cmd_lvgl_status(const struct shell* sh, size_t argc, char** argv)
+{
+    (void)argc;
+    (void)argv;
+
+    shell_print(sh, "LVGL status:");
+    shell_print(sh, "  ready: %s", lvgl_port_ready() ? "yes" : "no");
+    shell_print(sh, "  stress: %s", lvgl_port_stress_test_requested() ? "running/requested" : "idle");
+    return 0;
+}
+
+static int cmd_lvgl_stress(const struct shell* sh, size_t argc, char** argv)
+{
+    (void)argc;
+    (void)argv;
+
+    auto result = lvgl_port_start_stress_test();
+    if (result.is_error()) {
+        shell_error(sh, "LVGL stress start failed: %d", static_cast<int>(result.error()));
+        shell_error(sh, "Make sure the display is initialized and LVGL is ready");
+        return -EIO;
+    }
+
+    shell_print(sh, "LVGL stress test requested");
+    return 0;
+}
+
 static int cmd_nor_info(const struct shell* sh, size_t argc, char** argv) {
     (void)argc;
     (void)argv;
@@ -1251,8 +1279,16 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
     SHELL_SUBCMD_SET_END
 );
 
+SHELL_STATIC_SUBCMD_SET_CREATE(
+    sub_lvgl,
+    SHELL_CMD(status, NULL, "Show LVGL runtime status", cmd_lvgl_status),
+    SHELL_CMD(stress, NULL, "Start LVGL stress demo", cmd_lvgl_stress),
+    SHELL_SUBCMD_SET_END
+);
+
 SHELL_CMD_REGISTER(signal, &sub_signal, "Signal generator commands", NULL);
 SHELL_CMD_REGISTER(lcd, &sub_lcd, "ILI9481 LCD commands", NULL);
+SHELL_CMD_REGISTER(lvgl, &sub_lvgl, "LVGL GUI commands", NULL);
 SHELL_CMD_REGISTER(nor, &sub_nor, "NOR flash commands", NULL);
 SHELL_CMD_REGISTER(sysres, NULL,
                    "Show resource usage: sysres | sysres reset | sysres watch <period_ms> [count]", cmd_sysres);

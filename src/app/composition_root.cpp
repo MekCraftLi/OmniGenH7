@@ -27,6 +27,7 @@
 
 #include "composition_root.hpp"
 
+#include "platform/lvgl_port.hpp"
 #include "platform/mock_wave_sink.hpp"
 #include "platform/zephyr_display.hpp"
 #include "platform/zephyr_filter_switch.hpp"
@@ -95,6 +96,10 @@ void init_system()
         LOG_WRN("Display init failed: %d", static_cast<int>(display_ret.error()));
     } else {
         (void)g_system.display.clear(0x0000U);
+        auto lvgl_ret = lvgl_port_init();
+        if (lvgl_ret.is_error()) {
+            LOG_WRN("LVGL init failed: %d", static_cast<int>(lvgl_ret.error()));
+        }
     }
 
     auto filter_ret = g_system.filter_switch.mount();
