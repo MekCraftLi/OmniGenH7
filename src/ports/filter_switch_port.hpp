@@ -5,14 +5,14 @@
  *******************************************************************************
  * @attention
  *
- * FilterSwitchPort is the platform boundary for selecting the analog output
- * reconstruction filter and muting the output during switching.
+ * FilterSwitchPort hides the board GPIO implementation for analog filter bank
+ * selection and output mute control.
  *
  *******************************************************************************
  * @note
  *
- * Filter modes follow the hardware filter bank documented in the board handoff:
- * bypass, 25 kHz low-pass, 125 kHz low-pass, and 225 kHz low-pass.
+ * Mode names are logical output conditioning modes. Concrete board wiring is
+ * owned by platform implementations.
  *
  *******************************************************************************
  * @author  MekLi
@@ -20,7 +20,6 @@
  * @version 1.0
  *******************************************************************************
  */
-
 #pragma once
 
 /*-------- 1. includes and imports -----------------------------------------------------------------------------------*/
@@ -36,8 +35,8 @@ namespace omnigen {
 /**
  * @brief 模拟输出滤波器档位枚举。
  *
- * 枚举值对应板级模拟滤波器组的 GPIO 选择状态。业务层只选择逻辑档位，不直接
- * 操作 SEL/EN/MUTE 引脚。
+ * 枚举值对应板级模拟滤波器组的逻辑选择状态。业务层只选择逻辑档位，不直接操作
+ * SEL/EN/MUTE 引脚，也不持有任何 GPIO 资源。
  */
 enum class FilterMode : uint8_t {
     Bypass,   /**< 旁路或宽带模式。 */
@@ -52,16 +51,17 @@ enum class FilterMode : uint8_t {
  * @brief 滤波器切换端口抽象类。
  *
  * 该接口封装模拟滤波器组的初始化、档位选择和输出静音控制。实现类负责具体
- * GPIO 时序，调用方只关心逻辑滤波模式。
+ * GPIO 时序，调用方只关心逻辑滤波模式。当前语义为同步设置硬件状态，端口对象不拥有
+ * 独立执行线程；多个调用源同时操作时应由上层命令总线串行化。
  */
 class FilterSwitchPort {
 public:
     virtual ~FilterSwitchPort() = default;
 
-    virtual Result<void> mount() = 0;
+    virtual Result<void> initialize() = 0;
     virtual Result<void> set_mode(FilterMode mode) = 0;
     virtual Result<void> set_mute(bool enabled) = 0;
-    virtual bool mounted() const = 0;
+    virtual bool ready() const = 0;
     virtual bool muted() const = 0;
     virtual FilterMode mode() const = 0;
 };

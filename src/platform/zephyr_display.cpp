@@ -55,7 +55,7 @@ static Result<void> map_errno_to_result(int ret)
     }
 }
 
-Result<void> ZephyrDisplay::mount()
+Result<void> ZephyrDisplay::initialize()
 {
     const int ret = ili9481_support_init();
     if (ret != 0) {
@@ -63,7 +63,7 @@ Result<void> ZephyrDisplay::mount()
         return map_errno_to_result(ret);
     }
 
-    mounted_ = true;
+    ready_ = true;
     return ErrorCode::Ok;
 }
 

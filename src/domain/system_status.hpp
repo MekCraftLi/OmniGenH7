@@ -63,7 +63,7 @@ enum class AppRequestKind : uint8_t {
  * 描述模拟滤波器硬件是否初始化、当前是否静音以及当前选择的滤波档位。
  */
 struct FilterStatus {
-    bool mounted;    /**< 滤波器 GPIO 控制是否已初始化。 */
+    bool ready;      /**< 滤波器 GPIO 控制是否已初始化并可接受命令。 */
     bool muted;      /**< 输出是否处于静音状态。 */
     FilterMode mode; /**< 当前滤波器档位。 */
 };
@@ -74,7 +74,7 @@ struct FilterStatus {
  * 用于通过请求总线快速判断外部 NOR Flash 或存储适配器是否可用。
  */
 struct StorageStatus {
-    bool mounted; /**< 存储设备是否已初始化并可访问。 */
+    bool ready; /**< 存储设备是否已初始化并可访问；不表示文件系统挂载。 */
 };
 
 /**
@@ -83,7 +83,7 @@ struct StorageStatus {
  * 用于通过请求总线快速判断 LCD 显示适配器是否完成初始化。
  */
 struct DisplayStatus {
-    bool mounted; /**< 显示设备是否已初始化并可绘制。 */
+    bool ready; /**< 显示设备是否已初始化并可绘制。 */
 };
 
 /**

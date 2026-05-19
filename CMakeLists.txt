@@ -28,7 +28,6 @@ target_sources(app PRIVATE
     src/services/direct_command_bus.cpp
     src/services/direct_request_bus.cpp
     src/services/signal_engine.cpp
-    src/platform/mock_wave_sink.cpp
     src/platform/mpu_manager.cpp
     src/platform/zephyr_display.cpp
     src/platform/zephyr_storage.cpp
@@ -37,6 +36,9 @@ target_sources(app PRIVATE
     src/platform/lvgl_port.cpp
     third_party/lvgl/demos/stress/lv_demo_stress.c
     src/diagnostics/shell_commands.cpp
+    src/diagnostics/sysres_shell_commands.cpp
+    src/diagnostics/nor_shell_commands.cpp
+    src/diagnostics/display_shell_commands.cpp
     drivers/output/dac_wave_sink.c
     drivers/output/ili9481_support.c
     drivers/storage/w25q64_support.c

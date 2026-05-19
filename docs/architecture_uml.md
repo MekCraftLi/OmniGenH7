@@ -11,7 +11,7 @@ This document records the current OmniGen H7 architecture UML. The PNG is genera
 ```mermaid
 classDiagram
     class SystemContext {
-        +MockWaveSink wave_sink
+        +ZephyrWaveSink wave_sink
         +ZephyrStorage storage
         +ZephyrDisplay display
         +ZephyrFilterSwitch filter_switch
@@ -68,40 +68,39 @@ classDiagram
 
     class StoragePort {
         <<interface>>
-        +mount() Result~void~
+        +initialize() Result~void~
         +read(StorageReadRequest) Result~void~
         +write(StorageWriteRequest) Result~void~
         +erase_sector(uint32_t) Result~void~
         +erase_range(StorageEraseRangeRequest) Result~void~
-        +mounted() bool
+        +ready() bool
     }
 
     class DisplayPort {
         <<interface>>
-        +mount() Result~void~
+        +initialize() Result~void~
         +clear(uint16_t) Result~void~
         +fill(DisplayRect, uint16_t) Result~void~
         +blit(DisplayBlitRequest) Result~void~
-        +mounted() bool
+        +ready() bool
     }
 
     class FilterSwitchPort {
         <<interface>>
-        +mount() Result~void~
+        +initialize() Result~void~
         +set_mode(FilterMode) Result~void~
         +set_mute(bool) Result~void~
-        +mounted() bool
+        +ready() bool
         +muted() bool
         +mode() FilterMode
     }
 
-    class MockWaveSink
     class ZephyrWaveSink
     class ZephyrStorage
     class ZephyrDisplay
     class ZephyrFilterSwitch
 
-    SystemContext *-- MockWaveSink
+    SystemContext *-- ZephyrWaveSink
     SystemContext *-- ZephyrStorage
     SystemContext *-- ZephyrDisplay
     SystemContext *-- ZephyrFilterSwitch
@@ -111,7 +110,6 @@ classDiagram
 
     CommandBusPort <|.. DirectCommandBus
     RequestBusPort <|.. DirectRequestBus
-    WaveSinkPort <|.. MockWaveSink
     WaveSinkPort <|.. ZephyrWaveSink
     StoragePort <|.. ZephyrStorage
     DisplayPort <|.. ZephyrDisplay
@@ -143,8 +141,7 @@ flowchart LR
     DirectRequestBus -->|DisplayStatus| DisplayPort
     DirectRequestBus -->|SystemStatus| SystemReady[system_ready]
 
-    SignalEngine -->|current sink| MockWaveSink
-    ZephyrWaveSink -. available adapter .-> WaveSinkPort
+    SignalEngine -->|current sink| ZephyrWaveSink
     StoragePort --> ZephyrStorage
     DisplayPort --> ZephyrDisplay
     FilterSwitchPort --> ZephyrFilterSwitch

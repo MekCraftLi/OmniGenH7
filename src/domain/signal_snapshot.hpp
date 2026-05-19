@@ -87,7 +87,7 @@ struct OutputSnapshot {
  * 一次操作结果。
  */
 struct StorageSnapshot {
-    bool mounted;                /**< 存储设备是否已挂载或初始化成功。 */
+    bool ready;                  /**< 存储设备是否已初始化并可访问；不表示文件系统挂载。 */
     uint32_t waveform_count;     /**< 已知波形记录数量。 */
     uint32_t last_op_duration_ms; /**< 最近一次存储操作耗时，单位 ms。 */
     ErrorCode last_error;        /**< 最近一次存储操作错误码。 */

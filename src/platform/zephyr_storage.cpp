@@ -53,7 +53,7 @@ static Result<void> map_errno_to_result(int ret)
     }
 }
 
-Result<void> ZephyrStorage::mount()
+Result<void> ZephyrStorage::initialize()
 {
     int ret = w25q64_support_init();
     if (ret != 0) {
@@ -71,7 +71,7 @@ Result<void> ZephyrStorage::mount()
     }
 #endif
 
-    mounted_ = true;
+    ready_ = true;
     return ErrorCode::Ok;
 }
 
@@ -96,4 +96,3 @@ Result<void> ZephyrStorage::erase_range(const StorageEraseRangeRequest& request)
 }
 
 } // namespace omnigen
-

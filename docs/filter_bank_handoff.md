@@ -184,7 +184,7 @@ Slew Rate >= 20 V/us
 - 没有 `AnalogFilterSwitch` / `FilterBank` 平台模块。
 - 没有滤波器切换 shell 命令。
 - 没有将滤波器档位与波形/频率自动匹配。
-- 当前真实 DAC 输出链路也尚未完整接入应用层，`SignalEngine` 仍注入 `MockWaveSink`。
+- 当前真实 DAC 输出链路已接入应用层，`SignalEngine` 通过 `ZephyrWaveSink` 驱动 `dac_wave_sink` 设备；后续重点是上板验证 DMA 输出、缓存一致性和滤波器实测指标。
 
 ## MATLAB 仿真依据
 

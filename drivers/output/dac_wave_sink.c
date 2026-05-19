@@ -29,6 +29,7 @@
 #include <zephyr/drivers/clock_control/stm32_clock_control.h>
 #include <zephyr/logging/log.h>
 
+#include <string.h>
 #include <stm32h7xx_hal.h>
 #include <stm32h7xx_hal_dac.h>
 #include <stm32h7xx_hal_tim.h>
@@ -89,6 +90,13 @@ static int init_dac(const struct device *dev)
     const struct dac_wave_sink_config *cfg = dev->config;
     struct dac_wave_sink_data *data = dev->data;
 
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    GPIO_InitTypeDef gpio_init = {0};
+    gpio_init.Pin = GPIO_PIN_4;
+    gpio_init.Mode = GPIO_MODE_ANALOG;
+    gpio_init.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOA, &gpio_init);
+
     /* Initialize DAC HAL handle */
     data->hdac.Instance = DAC1;
     data->hdac.State = HAL_DAC_STATE_RESET;
@@ -98,6 +106,10 @@ static int init_dac(const struct device *dev)
 
     /* Initialize DAC */
     HAL_DAC_DeInit(&data->hdac);
+    if (HAL_DAC_Init(&data->hdac) != HAL_OK) {
+        LOG_ERR("Failed to initialize DAC");
+        return -EIO;
+    }
 
     DAC_ChannelConfTypeDef sConfig = {0};
     sConfig.DAC_Trigger = DAC_TRIGGER_T6_TRGO;
@@ -115,6 +127,8 @@ static int init_dac(const struct device *dev)
 static int init_timer(const struct device *dev)
 {
     struct dac_wave_sink_data *data = dev->data;
+
+    __HAL_RCC_TIM6_CLK_ENABLE();
 
     /* Initialize TIM6 HAL handle */
     data->htim.Instance = TIM6;
@@ -147,6 +161,8 @@ static int init_dma(const struct device *dev)
 {
     struct dac_wave_sink_data *data = dev->data;
 
+    __HAL_RCC_DMA1_CLK_ENABLE();
+
     /* Initialize DMA handle */
     data->hdma.Instance = DMA1_Stream5;
     data->hdma.Init.Request = DMA_REQUEST_DAC1_CH1;
@@ -167,10 +183,6 @@ static int init_dma(const struct device *dev)
     /* Link DMA to DAC */
     __HAL_LINKDMA(&data->hdac, DMA_Handle1, data->hdma);
 
-    /* Enable DMA interrupt */
-    NVIC_SetPriority(DMA1_Stream5_IRQn, 5);
-    NVIC_EnableIRQ(DMA1_Stream5_IRQn);
-
     LOG_INF("DMA initialized");
     return 0;
 }
@@ -179,6 +191,7 @@ static int init_dma(const struct device *dev)
 
 static int dac_wave_sink_init(const struct device *dev)
 {
+    const struct dac_wave_sink_config *cfg = dev->config;
     struct dac_wave_sink_data *data = dev->data;
     int ret;
 
@@ -186,9 +199,14 @@ static int dac_wave_sink_init(const struct device *dev)
 
     /* Initialize sample buffer */
     data->sample_buffer = dac_buffer;
-    data->buffer_size = DEFAULT_BUFFER_SIZE;
+    data->buffer_size = (cfg->sample_buffer_size == 0U || cfg->sample_buffer_size > DEFAULT_BUFFER_SIZE)
+                            ? DEFAULT_BUFFER_SIZE
+                            : cfg->sample_buffer_size;
     data->running = false;
-    data->sample_rate = 10000;  /* Default 10 kHz */
+    data->sample_rate = cfg->sample_rate_hz;
+    for (size_t i = 0U; i < (DEFAULT_BUFFER_SIZE * 2U); ++i) {
+        dac_buffer[i] = 2048U;
+    }
 
     /* Initialize hardware */
     ret = init_dac(dev);
@@ -214,9 +232,14 @@ static int dac_wave_sink_init(const struct device *dev)
 
 int dac_wave_sink_configure(const struct device *dev, uint32_t sample_rate)
 {
-    struct dac_wave_sink_data *data = dev->data;
     uint32_t timer_clock;
     uint32_t period;
+
+    if (dev == NULL || sample_rate == 0U) {
+        return -EINVAL;
+    }
+
+    struct dac_wave_sink_data *data = dev->data;
 
     /* Get timer clock frequency */
     /* APB1 clock = 137.5 MHz on this board */
@@ -224,6 +247,10 @@ int dac_wave_sink_configure(const struct device *dev, uint32_t sample_rate)
 
     /* Calculate timer period for desired sample rate */
     /* Period = TimerClock / SampleRate - 1 */
+    if (sample_rate > timer_clock) {
+        return -EINVAL;
+    }
+
     period = (timer_clock / sample_rate) - 1;
 
     if (period > 0xFFFF) {
@@ -241,6 +268,11 @@ int dac_wave_sink_configure(const struct device *dev, uint32_t sample_rate)
 
 int dac_wave_sink_start(const struct device *dev)
 {
+    if (dev == NULL) {
+        return -EINVAL;
+    }
+
+    const struct dac_wave_sink_config *cfg = dev->config;
     struct dac_wave_sink_data *data = dev->data;
 
     if (data->running) {
@@ -248,16 +280,25 @@ int dac_wave_sink_start(const struct device *dev)
     }
 
     /* Enable DAC channel */
-    HAL_DAC_Start(&data->hdac, DAC_CHANNEL_1);
+    if (HAL_DAC_Start(&data->hdac, cfg->dac_channel) != HAL_OK) {
+        LOG_ERR("Failed to start DAC channel");
+        return -EIO;
+    }
 
     /* Start DMA transfer */
-    HAL_DAC_Start_DMA(&data->hdac, DAC_CHANNEL_1,
-                      (uint32_t *)data->sample_buffer,
-                      data->buffer_size * 2,  /* Double buffer */
-                      DAC_ALIGN_12B_R);
+    if (HAL_DAC_Start_DMA(&data->hdac, cfg->dac_channel,
+                          (uint32_t *)data->sample_buffer,
+                          data->buffer_size * 2,  /* Double buffer */
+                          DAC_ALIGN_12B_R) != HAL_OK) {
+        LOG_ERR("Failed to start DAC DMA");
+        return -EIO;
+    }
 
     /* Start timer */
-    HAL_TIM_Base_Start(&data->htim);
+    if (HAL_TIM_Base_Start(&data->htim) != HAL_OK) {
+        LOG_ERR("Failed to start TIM trigger");
+        return -EIO;
+    }
 
     data->running = true;
     LOG_INF("DAC output started");
@@ -266,6 +307,11 @@ int dac_wave_sink_start(const struct device *dev)
 
 int dac_wave_sink_stop(const struct device *dev)
 {
+    if (dev == NULL) {
+        return -EINVAL;
+    }
+
+    const struct dac_wave_sink_config *cfg = dev->config;
     struct dac_wave_sink_data *data = dev->data;
 
     if (!data->running) {
@@ -276,7 +322,7 @@ int dac_wave_sink_stop(const struct device *dev)
     HAL_TIM_Base_Stop(&data->htim);
 
     /* Stop DMA */
-    HAL_DAC_Stop_DMA(&data->hdac, DAC_CHANNEL_1);
+    HAL_DAC_Stop_DMA(&data->hdac, cfg->dac_channel);
 
     data->running = false;
     LOG_INF("DAC output stopped");
@@ -285,6 +331,10 @@ int dac_wave_sink_stop(const struct device *dev)
 
 int dac_wave_sink_set_buffer(const struct device *dev, const uint16_t *samples, size_t count)
 {
+    if (dev == NULL || samples == NULL || count == 0U) {
+        return -EINVAL;
+    }
+
     struct dac_wave_sink_data *data = dev->data;
 
     if (count > data->buffer_size * 2) {

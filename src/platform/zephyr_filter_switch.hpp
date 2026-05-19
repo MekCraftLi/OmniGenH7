@@ -42,17 +42,17 @@ public:
     ZephyrFilterSwitch() = default;
     ~ZephyrFilterSwitch() override = default;
 
-    Result<void> mount() override;
+    Result<void> initialize() override;
     Result<void> set_mode(FilterMode mode) override;
     Result<void> set_mute(bool enabled) override;
-    bool mounted() const override { return mounted_; }
+    bool ready() const override { return ready_; }
     bool muted() const override { return muted_; }
     FilterMode mode() const override { return mode_; }
 
 private:
     FilterMode mode_ = FilterMode::Bypass;
     bool muted_ = false;
-    bool mounted_ = false;
+    bool ready_ = false;
 };
 
 } // namespace omnigen

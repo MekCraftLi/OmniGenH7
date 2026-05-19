@@ -51,7 +51,7 @@ Result<void> DirectRequestBus::request(const AppRequest& request, AppResponse& r
 
         case AppRequestKind::FilterStatus:
             response.filter = FilterStatus{
-                .mounted = filter_switch_.mounted(),
+                .ready = filter_switch_.ready(),
                 .muted = filter_switch_.muted(),
                 .mode = filter_switch_.mode(),
             };
@@ -59,13 +59,13 @@ Result<void> DirectRequestBus::request(const AppRequest& request, AppResponse& r
 
         case AppRequestKind::StorageStatus:
             response.storage = StorageStatus{
-                .mounted = storage_.mounted(),
+                .ready = storage_.ready(),
             };
             return ErrorCode::Ok;
 
         case AppRequestKind::DisplayStatus:
             response.display = DisplayStatus{
-                .mounted = display_.mounted(),
+                .ready = display_.ready(),
             };
             return ErrorCode::Ok;
 

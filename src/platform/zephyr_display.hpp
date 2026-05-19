@@ -42,14 +42,14 @@ public:
     ZephyrDisplay() = default;
     ~ZephyrDisplay() override = default;
 
-    Result<void> mount() override;
+    Result<void> initialize() override;
     Result<void> clear(uint16_t rgb565) override;
     Result<void> fill(const DisplayRect& rect, uint16_t rgb565) override;
     Result<void> blit(const DisplayBlitRequest& request) override;
-    bool mounted() const override { return mounted_; }
+    bool ready() const override { return ready_; }
 
 private:
-    bool mounted_ = false;
+    bool ready_ = false;
 };
 
 } // namespace omnigen

@@ -10,7 +10,7 @@
  *******************************************************************************
  * @note
  *
- * The default mounted state is bypass with the filter switch enabled and output
+ * The default ready state is bypass with the filter switch enabled and output
  * unmuted.
  *
  *******************************************************************************
@@ -100,7 +100,7 @@ static void filter_bits(FilterMode mode, int& sel0, int& sel1)
 
 /*-------- 4. implementation -----------------------------------------------------------------------------------------*/
 
-Result<void> ZephyrFilterSwitch::mount()
+Result<void> ZephyrFilterSwitch::initialize()
 {
     if (!gpio_ready()) {
         LOG_ERR("Filter switch GPIOs not ready");
@@ -127,16 +127,16 @@ Result<void> ZephyrFilterSwitch::mount()
         return map_errno_to_result(ret);
     }
 
-    mounted_ = true;
+    ready_ = true;
     muted_ = false;
     mode_ = FilterMode::Bypass;
-    LOG_INF("Filter switch mounted in bypass mode");
+    LOG_INF("Filter switch initialized in bypass mode");
     return ErrorCode::Ok;
 }
 
 Result<void> ZephyrFilterSwitch::set_mode(FilterMode mode)
 {
-    if (!mounted_) {
+    if (!ready_) {
         return ErrorCode::InvalidState;
     }
 
@@ -184,7 +184,7 @@ Result<void> ZephyrFilterSwitch::set_mode(FilterMode mode)
 
 Result<void> ZephyrFilterSwitch::set_mute(bool enabled)
 {
-    if (!mounted_) {
+    if (!ready_) {
         return ErrorCode::InvalidState;
     }
 

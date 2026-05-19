@@ -373,6 +373,16 @@
         };
     };
 
+    dac_wave_sink: dac-wave-sink {
+        compatible = "mekcraft,dac-wave-sink";
+        dac = <&dac1>;
+        timer = <&timers6>;
+        dma = <&dma1>;
+        sample-buffer-size = <256>;
+        sample-rate-hz = <10000>;
+        status = "okay";
+    };
+
     /*
      * aliases 节点: 设备别名
      * 简化设备获取，使用 DT_ALIAS(alias_name) 宏

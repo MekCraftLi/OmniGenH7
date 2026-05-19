@@ -27,16 +27,16 @@
 
 #include "composition_root.hpp"
 
+#include "diagnostics/shell_commands.hpp"
 #include "platform/lvgl_port.hpp"
-#include "platform/mock_wave_sink.hpp"
 #include "platform/zephyr_display.hpp"
 #include "platform/zephyr_filter_switch.hpp"
 #include "platform/mpu_manager.hpp"
 #include "platform/zephyr_storage.hpp"
+#include "platform/zephyr_wave_sink.hpp"
 #include "services/direct_command_bus.hpp"
 #include "services/direct_request_bus.hpp"
 #include "services/signal_engine.hpp"
-#include "diagnostics/shell_commands.hpp"
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -55,7 +55,7 @@ namespace omnigen {
  * 容器。成员构造顺序即依赖顺序，避免在其他模块中创建全局单例。
  */
 struct SystemContext {
-    MockWaveSink wave_sink;
+    ZephyrWaveSink wave_sink;
     ZephyrStorage storage;
     ZephyrDisplay display;
     ZephyrFilterSwitch filter_switch;
@@ -86,12 +86,12 @@ void init_system()
 {
     MpuManager::init();
 
-    auto storage_ret = g_system.storage.mount();
+    auto storage_ret = g_system.storage.initialize();
     if (storage_ret.is_error()) {
         LOG_WRN("External storage init failed: %d", static_cast<int>(storage_ret.error()));
     }
 
-    auto display_ret = g_system.display.mount();
+    auto display_ret = g_system.display.initialize();
     if (display_ret.is_error()) {
         LOG_WRN("Display init failed: %d", static_cast<int>(display_ret.error()));
     } else {
@@ -102,7 +102,7 @@ void init_system()
         }
     }
 
-    auto filter_ret = g_system.filter_switch.mount();
+    auto filter_ret = g_system.filter_switch.initialize();
     if (filter_ret.is_error()) {
         LOG_WRN("Filter switch init failed: %d", static_cast<int>(filter_ret.error()));
     }

@@ -1,2 +1,8 @@
 config BOARD_OMNIGEN_H7
    select SOC_STM32H723XX
+   select USE_STM32_HAL_DAC
+   select USE_STM32_HAL_DAC_EX
+   select USE_STM32_HAL_DMA
+   select USE_STM32_HAL_GPIO
+   select USE_STM32_HAL_TIM
+   select USE_STM32_HAL_TIM_EX
